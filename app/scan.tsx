@@ -671,7 +671,7 @@ export default function ScanScreen() {
                 </TouchableOpacity>
               </View>
             </>
-          ) : flags.scan.device_mode === 'mobile-camera' ? (
+          ) : deviceMode === 'mobile-camera' ? (
             <>
               <EnhancedBarcodeScanner onScan={handleBarcodeOnlyScan} mode="barcode" />
               <View style={styles.modeSwitcher}>

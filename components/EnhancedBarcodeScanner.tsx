@@ -26,7 +26,7 @@ export function EnhancedBarcodeScanner({
 
   useEffect(() => {
     let mounted = true;
-    if (flags.scan.device_mode === 'mobile-camera' && permission?.granted) {
+    if (flags.scan.device_mode === 'mobile-camera') {
       import('expo-camera')
         .then((m) => {
           if (mounted) setCameraViewComp(() => m.CameraView as unknown as React.ComponentType<any>);
@@ -38,7 +38,7 @@ export function EnhancedBarcodeScanner({
     return () => {
       mounted = false;
     };
-  }, [flags.scan.device_mode, permission?.granted]);
+  }, [flags.scan.device_mode]);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
@@ -461,7 +461,7 @@ export function EnhancedBarcodeScanner({
 
   return (
     <View style={StyleSheet.absoluteFillObject}>
-      {CameraViewComp ? (
+      {CameraViewComp && permission?.granted ? (
         <CameraViewComp
           ref={cameraRef as any}
           style={StyleSheet.absoluteFillObject}

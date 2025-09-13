@@ -106,9 +106,15 @@ export const [ScanProvider, useScan] = createContextHook<ScanProviderState>(() =
     setDeviceModeState(mode);
     if (Platform.OS === 'web') {
       Alert.alert('Device Mode Changed', `Device Mode set to: ${mode === 'skorpio-x5' ? 'Skorpio X5 (Hardware Scanner Only)' : mode === 'mobile-camera' ? 'Mobile (Camera)' : 'External/Bluetooth Wedge'}`);
-      window.location.reload();
+      // Small delay to ensure state is saved before reload
+      setTimeout(() => window.location.reload(), 100);
     } else {
-      // Consumers should re-bind
+      // Mobile platforms should re-bind
+      if (mode === 'mobile-camera') {
+        // Trigger re-bind for camera mode
+        setActiveAdapter('camera');
+        setIsBound(true);
+      }
     }
   }, []);
 
@@ -123,6 +129,10 @@ export const [ScanProvider, useScan] = createContextHook<ScanProviderState>(() =
     setIsBound(false);
     const adapter = resolveAdapterForMode(deviceMode);
     setActiveAdapter(adapter);
+    // Ensure camera adapter is properly set for mobile-camera mode
+    if (deviceMode === 'mobile-camera' && adapter === 'camera') {
+      console.log('Binding camera adapter for mobile-camera mode');
+    }
     setTimeout(() => setIsBound(true), 50);
   }, [deviceMode, resolveAdapterForMode]);
 
