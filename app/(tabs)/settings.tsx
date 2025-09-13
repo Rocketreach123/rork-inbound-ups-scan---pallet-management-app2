@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, Platform, Modal } from 'react-native';
-import { User, Printer, MapPin, Bell, Shield, ChevronRight, LogOut, Cable, Smartphone, Radio } from 'lucide-react-native';
+import { User, Printer, MapPin, Bell, Shield, ChevronRight, LogOut, Cable, Smartphone, Radio, Bluetooth, Scan } from 'lucide-react-native';
 import { useWarehouse } from '@/providers/warehouse-provider';
 import ApiConfigSheet from '@/components/ApiConfigSheet';
 import { useApi } from '@/providers/api-provider';
 import { useScan, DeviceMode } from '@/providers/scan-provider';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const { settings, updateSettings } = useWarehouse();
   const { isEnabled: apiEnabled } = useApi();
   const [apiVisible, setApiVisible] = useState<boolean>(false);
   const { deviceMode, setDeviceMode, flags } = useScan();
+  const insets = useSafeAreaInsets();
 
   const settingsSections = [
     {
@@ -64,24 +66,53 @@ export default function SettingsScreen() {
           action: 'custom',
           onPress: undefined,
           render: () => (
-            <View style={{ gap: 8 }}>
-              {[
-                { label: 'Skorpio X5 (Hardware Scanner)', value: 'skorpio-x5' as DeviceMode },
-                { label: 'Mobile (Phone/iPad Camera Scanner)', value: 'mobile-camera' as DeviceMode },
-                { label: 'External/Bluetooth Scanner (Keystroke Wedge)', value: 'external-wedge' as DeviceMode },
-              ].map(opt => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={styles.radioRow}
-                  onPress={async () => { await setDeviceMode(opt.value); }}
-                  testID={`device-mode-${opt.value}`}
-                >
-                  <View style={[styles.radioOuter, deviceMode === opt.value && styles.radioOuterActive]}>
-                    {deviceMode === opt.value && <View style={styles.radioInner} />}
-                  </View>
-                  <Text style={styles.radioLabel}>{opt.label}</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.deviceGrid}>
+              {([
+                {
+                  label: 'Skorpio X5',
+                  subtitle: 'Built-in hardware trigger',
+                  value: 'skorpio-x5' as DeviceMode,
+                  Icon: Radio,
+                },
+                {
+                  label: 'Mobile Camera',
+                  subtitle: 'Phone/iPad camera scanning',
+                  value: 'mobile-camera' as DeviceMode,
+                  Icon: Scan,
+                },
+                {
+                  label: 'Bluetooth Scanner',
+                  subtitle: 'Keystroke wedge input',
+                  value: 'external-wedge' as DeviceMode,
+                  Icon: Bluetooth,
+                },
+              ] as { label: string; subtitle: string; value: DeviceMode; Icon: React.ComponentType<{ color?: string; size?: number }> }[]).map((opt) => {
+                const selected = deviceMode === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={[styles.deviceCard, selected && styles.deviceCardSelected]}
+                    onPress={async () => { console.log('Selecting device mode', opt.value); await setDeviceMode(opt.value); }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    testID={`device-mode-${opt.value}`}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.deviceIconWrap, selected && styles.deviceIconWrapSelected]}>
+                      <opt.Icon color={selected ? '#1e40af' : '#374151'} size={24} />
+                    </View>
+                    <View style={styles.deviceTextWrap}>
+                      <Text style={[styles.deviceTitle, selected && styles.deviceTitleSelected]}>{opt.label}</Text>
+                      <Text style={styles.deviceSubtitle}>{opt.subtitle}</Text>
+                    </View>
+                    {selected && (
+                      <View style={styles.deviceBadge}>
+                        <Text style={styles.deviceBadgeText}>Selected</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )
         },
@@ -121,14 +152,14 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {settingsSections.map((section, sectionIndex) => (
-        <View key={sectionIndex} style={styles.section}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 24 }}>
+      {settingsSections.map((section) => (
+        <View key={section.title} style={styles.section}>
           <Text style={styles.sectionTitle}>{section.title}</Text>
           <View style={styles.sectionContent}>
             {section.items.map((item: any, itemIndex: number) => (
               <TouchableOpacity
-                key={itemIndex}
+                key={item.label}
                 style={[
                   styles.settingItem,
                   itemIndex === section.items.length - 1 && styles.lastItem,
@@ -329,34 +360,67 @@ const styles = StyleSheet.create({
   },
   primary: { backgroundColor: '#1e40af' },
   buttonText: { color: '#fff', fontWeight: '700' },
-  radioRow: {
+  deviceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  deviceCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 4,
   },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#9ca3af',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOuterActive: {
+  deviceCardSelected: {
+    backgroundColor: '#eef2ff',
     borderColor: '#1e40af',
   },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#1e40af',
+  deviceIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#eef2ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#c7d2fe',
   },
-  radioLabel: {
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '600',
+  deviceIconWrapSelected: {
+    backgroundColor: '#dbeafe',
+    borderColor: '#1e40af',
+  },
+  deviceTextWrap: {
     flex: 1,
-    flexWrap: 'wrap',
+  },
+  deviceTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  deviceTitleSelected: {
+    color: '#1e40af',
+  },
+  deviceSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  deviceBadge: {
+    backgroundColor: '#1e40af',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  deviceBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });
