@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, Image, Anima
 import { useScan } from '@/providers/scan-provider';
 import * as FileSystem from 'expo-file-system';
 import type { CameraView } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import { DetectedBarcode, LabelExtractionResult, OcrLine, Symbology } from '@/types/warehouse';
 
 interface EnhancedBarcodeScannerProps {
@@ -19,8 +20,25 @@ export function EnhancedBarcodeScanner({
   continuous = false 
 }: EnhancedBarcodeScannerProps) {
   const { flags } = useScan();
-  const permission: any = flags.scan.device_mode === 'mobile-camera' ? { granted: true } : { granted: false };
-  const requestPermission = async () => {};
+  const [permission, requestPermission] = useCameraPermissions();
+
+  const [CameraViewComp, setCameraViewComp] = useState<React.ComponentType<any> | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    if (flags.scan.device_mode === 'mobile-camera' && permission?.granted) {
+      import('expo-camera')
+        .then((m) => {
+          if (mounted) setCameraViewComp(() => m.CameraView as unknown as React.ComponentType<any>);
+        })
+        .catch((e) => console.log('Failed to load CameraView', e));
+    } else {
+      setCameraViewComp(null);
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [flags.scan.device_mode, permission?.granted]);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
@@ -426,13 +444,53 @@ export function EnhancedBarcodeScanner({
     // The actual callback will be triggered by takePicture
   };
 
+  if (!permission) {
+    return <View style={styles.container} />;
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>Camera access is required</Text>
+        <TouchableOpacity style={styles.button} onPress={requestPermission} testID="grant-camera-permission">
+          <Text style={styles.buttonText}>Grant Camera Permission</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={StyleSheet.absoluteFillObject}>
-      {flags.ui.show_camera_controls && (
+      {CameraViewComp ? (
+        <CameraViewComp
+          ref={cameraRef as any}
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          enableTorch={torchOn}
+          onBarcodeScanned={handleBarCodeScanned}
+          onCameraReady={() => {
+            console.log('Camera ready');
+            setCameraReady(true);
+            cameraReadyAtRef.current = Date.now();
+          }}
+          barcodeScannerSettings={{
+            barcodeTypes: [
+              'code128',
+              'code39',
+              'code93',
+              'ean13',
+              'ean8',
+              'qr',
+              'pdf417',
+              'aztec',
+              'datamatrix',
+            ],
+          }}
+        />
+      ) : (
         <View style={StyleSheet.absoluteFillObject} testID="camera-view-placeholder" />
       )}
-      
-      {/* Barcode Scanning Line - visible in all modes */}
+
       {mode === 'barcode' && (
         <View style={styles.barcodeScanOverlay}>
           <Animated.View 
@@ -478,15 +536,12 @@ export function EnhancedBarcodeScanner({
       
       {(mode === 'label' || mode === 'training') && (
         <>
-          {/* 4x6 Label Rectangle Overlay */}
           <View style={styles.labelOverlay}>
             <View style={styles.labelRectangle}>
               <View style={styles.cornerTopLeft} />
               <View style={styles.cornerTopRight} />
               <View style={styles.cornerBottomLeft} />
               <View style={styles.cornerBottomRight} />
-              
-              {/* Barcode scanning line within label rectangle */}
               <Animated.View 
                 style={[
                   styles.labelScanLine,
@@ -504,7 +559,6 @@ export function EnhancedBarcodeScanner({
             <Text style={styles.labelGuideText}>Align shipping label within frame - barcode will be scanned automatically</Text>
           </View>
           
-          {/* Controls positioned outside the label area */}
           <View style={styles.captureOverlay}>
             {!showTapToOcr ? (
               <TouchableOpacity 
