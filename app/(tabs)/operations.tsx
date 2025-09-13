@@ -9,7 +9,7 @@ export default function OperationsScreen() {
   const [activeTab, setActiveTab] = useState<'pallets' | 'locations'>('pallets');
 
   const tabs = [
-    { id: 'pallets', label: 'Active Pallets' },
+    { id: 'pallets', label: 'Active License Plates' },
     { id: 'locations', label: 'Locations' },
   ];
 
@@ -45,7 +45,7 @@ export default function OperationsScreen() {
               testID="create-pallet"
             >
               <PlusCircle color="#fff" size={20} />
-              <Text style={styles.createPalletText}>Create Pallet Label</Text>
+              <Text style={styles.createPalletText}>Create License Plate Label</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.createPalletButton, styles.upsButton]}
@@ -66,7 +66,7 @@ export default function OperationsScreen() {
                     <Package color="#1e40af" size={24} />
                   </View>
                   <View style={styles.cardHeaderContent}>
-                    <Text style={styles.palletCode}>{pallet.palletCode}</Text>
+                    <Text style={styles.palletCode}>LP {pallet.palletCode.replace(/^LP/i, '')}</Text>
                     <View style={styles.statusBadge}>
                       <Text style={styles.statusText}>{pallet.state}</Text>
                     </View>
@@ -98,7 +98,7 @@ export default function OperationsScreen() {
                   </TouchableOpacity>
                   {pallet.state === 'OPEN' && (
                     <TouchableOpacity style={[styles.actionButton, styles.closeButton]}>
-                      <Text style={styles.closeButtonText}>Close Pallet</Text>
+                      <Text style={styles.closeButtonText}>Close License Plate</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -135,7 +135,7 @@ export default function OperationsScreen() {
                   <View style={styles.locationPallet}>
                     <Package color="#6b7280" size={14} />
                     <Text style={styles.locationPalletText}>
-                      Current: {location.currentPallet}
+                      Current LP: {location.currentPallet}
                     </Text>
                   </View>
                 )}

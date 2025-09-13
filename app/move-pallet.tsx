@@ -5,27 +5,29 @@ import { router } from 'expo-router';
 import { useWarehouse } from '@/providers/warehouse-provider';
 import { BarcodeScannerView } from '@/components/BarcodeScanner';
 
-type ScanMode = 'pallet' | 'location' | 'complete';
+type ScanMode = 'licensePlate' | 'location' | 'complete';
 
 export default function MovePalletScreen() {
-  const [scanMode, setScanMode] = useState<ScanMode>('pallet');
+  const [scanMode, setScanMode] = useState<ScanMode>('licensePlate');
   const [palletCode, setPalletCode] = useState<string | null>(null);
   const [locationCode, setLocationCode] = useState<string | null>(null);
-  const { movePallet } = useWarehouse();
+  const { movePallet, matchPalletCodeFromScan } = useWarehouse();
 
   const handleScan = async (data: string) => {
     console.log(`Scanned ${scanMode}:`, data);
     
-    if (scanMode === 'pallet') {
-      if (/^(PAL|LP)[:\-]/i.test(data) || /^(LP\d{6})$/i.test(data)) {
-        setPalletCode(data.replace(/^(PAL|LP)[:\-]/i, ''));
+    if (scanMode === 'licensePlate') {
+      const lp = matchPalletCodeFromScan(data);
+      if (lp) {
+        setPalletCode(lp);
         setScanMode('location');
       } else {
-        Alert.alert('Invalid Scan', 'Please scan a valid pallet barcode');
+        Alert.alert('Invalid Scan', 'Please scan a valid license plate barcode');
       }
     } else if (scanMode === 'location') {
-      if (data.startsWith('LOC:') || data.includes('LOC-')) {
-        setLocationCode(data.replace('LOC:', ''));
+      if (/^LOC[:\-]/i.test(data) || data.includes('LOC-')) {
+        const loc = data.replace(/^LOC[:\-]?/i, '');
+        setLocationCode(loc);
         setScanMode('complete');
         await completeMove();
       } else {
@@ -41,7 +43,7 @@ export default function MovePalletScreen() {
     if (success) {
       Alert.alert(
         'Success',
-        `Pallet ${palletCode} moved to ${locationCode}`,
+        `License Plate ${palletCode} moved to ${locationCode}`,
         [{ text: 'OK', onPress: () => router.back() }]
       );
     }
@@ -50,7 +52,7 @@ export default function MovePalletScreen() {
   const reset = () => {
     setPalletCode(null);
     setLocationCode(null);
-    setScanMode('pallet');
+    setScanMode('licensePlate');
   };
 
   if (scanMode === 'complete') {
@@ -67,7 +69,7 @@ export default function MovePalletScreen() {
             <View style={styles.moveItem}>
               <Package color="#6b7280" size={20} />
               <View style={styles.moveItemContent}>
-                <Text style={styles.moveLabel}>Pallet</Text>
+                <Text style={styles.moveLabel}>License Plate</Text>
                 <Text style={styles.moveValue}>{palletCode}</Text>
               </View>
             </View>
@@ -116,12 +118,12 @@ export default function MovePalletScreen() {
         </View>
         
         <View style={styles.instructions}>
-          {scanMode === 'pallet' ? (
+          {scanMode === 'licensePlate' ? (
             <>
               <Package color="#fff" size={32} />
-              <Text style={styles.instructionText}>Scan Pallet Barcode</Text>
+              <Text style={styles.instructionText}>Scan License Plate</Text>
               <Text style={styles.instructionSubtext}>
-                Position the pallet label within the frame
+                Position the license plate label within the frame
               </Text>
             </>
           ) : (
@@ -138,7 +140,7 @@ export default function MovePalletScreen() {
         {palletCode && (
           <View style={styles.statusBar}>
             <Text style={styles.statusText}>
-              Pallet: {palletCode}
+              License Plate: {palletCode}
             </Text>
           </View>
         )}

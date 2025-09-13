@@ -250,9 +250,17 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
   const matchPalletCodeFromScan = useCallback((data: string): string | null => {
     if (!data) return null;
     const trimmed = data.trim();
-    if (/^(?:PAL|LP)[:\-]/i.test(trimmed)) {
-      const code = trimmed.replace(/^(?:PAL|LP)[:\-]/i, '').trim();
-      return code || null;
+    if (/^(?:PAL|LP)[:\-]?/i.test(trimmed)) {
+      const digits = trimmed.replace(/^(?:PAL|LP)[:\-]?/i, '').trim();
+      if (/^\d{6}$/.test(digits)) {
+        return `LP${digits}`;
+      }
+      if (/^LP\d{6}$/i.test(digits)) {
+        return digits.toUpperCase();
+      }
+    }
+    if (/^LP\d{6}$/i.test(trimmed)) {
+      return trimmed.toUpperCase();
     }
     const exact = pallets.find(p => p.palletCode.toUpperCase() === trimmed.toUpperCase());
     if (exact) return exact.palletCode;
