@@ -127,12 +127,23 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     }
   }, [apiEnabled, get]);
 
+  const getNextLicensePlate = useCallback((): string => {
+    const existing = pallets
+      .map(p => p.palletCode)
+      .filter(c => /^LP\d{6}$/.test(c))
+      .map(c => parseInt(c.replace(/^LP/, ''), 10));
+    const seed = 101000;
+    const next = ((existing.length ? Math.max(...existing) : seed) + 1).toString().padStart(6, '0');
+    return `LP${next}`;
+  }, [pallets]);
+
   // Create unmatched pallet
   const createUnmatchedPallet = useCallback(async (): Promise<UnmatchedPallet> => {
     const today = new Date();
+    const lpCode = getNextLicensePlate();
     const newUnmatchedPallet: UnmatchedPallet = {
       id: `unmatched-${Date.now()}`,
-      palletCode: `PAL-UNMATCHED-${today.toISOString().split('T')[0]}`,
+      palletCode: lpCode,
       packages: [],
       createdAt: today.toISOString(),
       needsManualReview: true,
@@ -140,7 +151,6 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     
     setUnmatchedPallet(newUnmatchedPallet);
     
-    // Also create a regular pallet entry for tracking
     const pallet: Pallet = {
       id: newUnmatchedPallet.id,
       palletCode: newUnmatchedPallet.palletCode,
@@ -163,7 +173,7 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     await saveScanEvent(event);
     
     return newUnmatchedPallet;
-  }, [saveScanEvent]);
+  }, [saveScanEvent, getNextLicensePlate]);
 
   // Move package to unmatched pallet
   const movePackageToUnmatched = useCallback(async (packageId: string): Promise<boolean> => {
@@ -217,8 +227,8 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
   const matchPalletCodeFromScan = useCallback((data: string): string | null => {
     if (!data) return null;
     const trimmed = data.trim();
-    if (/^PAL[:\-]/i.test(trimmed)) {
-      const code = trimmed.replace(/^PAL[:\-]/i, '').trim();
+    if (/^(?:PAL|LP)[:\-]/i.test(trimmed)) {
+      const code = trimmed.replace(/^(?:PAL|LP)[:\-]/i, '').trim();
       return code || null;
     }
     const exact = pallets.find(p => p.palletCode.toUpperCase() === trimmed.toUpperCase());
@@ -226,23 +236,20 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     return null;
   }, [pallets]);
 
-  // Generate pallet barcode
+  // Generate license plate barcode
   const generatePalletBarcode = useCallback((palletCode: string): string => {
-    // Generate ZPL code for pallet label
     const zpl = `^XA
 ^CF0,40
-^FO40,40^FD PALLET ${palletCode} ^FS
-^FO40,90^FD WORK DATE: ${new Date().toISOString().split('T')[0]} ^FS
-^FO40,140^FD DEPT: WAREHOUSE ^FS
+^FO40,40^FD LICENSE PLATE ${palletCode} ^FS
+^FO40,90^FD DATE: ${new Date().toISOString().split('T')[0]} ^FS
+^FO40,140^FD TYPE: LP ^FS
 ^BY3,3,80^FO40,200^BCN,100,Y,N,N
-^FD PAL:${palletCode} ^FS
+^FD LP:${palletCode} ^FS
 ^FO300,200^BQN,2,8
-^FDQA,aca://pallet/${palletCode}^FS
+^FDQA,aca://lp/${palletCode}^FS
 ^XZ`;
-    
-    console.log('Generated ZPL for pallet:', palletCode);
+    console.log('Generated ZPL for LP:', palletCode);
     console.log(zpl);
-    
     return zpl;
   }, []);
 
@@ -254,7 +261,7 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     console.log('PRINT ZPL:\n', zpl);
     const event: ScanEvent = {
       id: `evt-${Date.now()}`,
-      eventType: 'PALLET_LABEL_PRINTED',
+      eventType: 'LICENSE_PLATE_PRINTED',
       palletId: pallet.id,
       palletCode: pallet.palletCode,
       timestamp: new Date().toLocaleString(),
@@ -391,28 +398,20 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
       let pallet: Pallet;
       let created = false;
       if (apiMatched) {
-        const dueDate = new Date(po.dueDate);
-        const today = new Date();
-        const daysDiff = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        let dayBucket = 'NEXT-WEEK';
-        if (daysDiff === 0) dayBucket = 'TODAY';
-        else if (daysDiff === 1) dayBucket = 'TOMORROW';
-        else if (daysDiff <= 5) dayBucket = dueDate.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
-        pallet = pallets.find(p => 
-          p.dayBucket === dayBucket && 
-          p.department === po.department && 
-          p.state === 'OPEN'
-        ) || {
-          id: `pal-${Date.now()}`,
-          palletCode: `PAL-${today.toISOString().split('T')[0]}-${dayBucket}-${po.department}`,
-          workDate: po.dueDate,
-          dayBucket,
-          department: po.department,
-          state: 'OPEN',
-          packageCount: 0,
-          currentLocation: 'Z1/A01/B01/L1',
-        };
-        if (!pallets.find(p => p.id === pallet.id)) {
+        const existingOpen = pallets.find(p => p.state === 'OPEN');
+        if (existingOpen) {
+          pallet = existingOpen;
+        } else {
+          pallet = {
+            id: `pal-${Date.now()}`,
+            palletCode: getNextLicensePlate(),
+            workDate: new Date().toISOString().split('T')[0],
+            dayBucket: 'AUTO',
+            department: po.department,
+            state: 'OPEN',
+            packageCount: 0,
+            currentLocation: 'Z1/A01/B01/L1',
+          };
           setPallets(prev => [...prev, pallet]);
           created = true;
         }
@@ -480,13 +479,7 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
   // Create pallet
   const createPallet = useCallback(async (workDate: string, dayBucket: string, department: string): Promise<Pallet> => {
     const today = new Date();
-    const codeBase = `PAL-${workDate}-${dayBucket}-${department}`;
-    let palletCode = codeBase;
-    let index = 2;
-    while (pallets.some(p => p.palletCode === palletCode)) {
-      palletCode = `${codeBase}-${index}`;
-      index += 1;
-    }
+    const palletCode = getNextLicensePlate();
 
     const newPallet: Pallet = {
       id: `pal-${Date.now()}`,
@@ -509,18 +502,12 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     };
     await saveScanEvent(event);
     return newPallet;
-  }, [pallets, saveScanEvent]);
+  }, [pallets, saveScanEvent, getNextLicensePlate]);
 
   // Create named pallet quickly and set as OPEN
-  const createNamedPallet = useCallback(async (displayName: string): Promise<Pallet> => {
+  const createNamedPallet = useCallback(async (_displayName: string): Promise<Pallet> => {
     const today = new Date().toISOString().split('T')[0];
-    const base = `LP-${today}-${displayName.toUpperCase().replace(/[^A-Z0-9]+/g, '-')}`;
-    let code = base;
-    let idx = 2;
-    while (pallets.some(p => p.palletCode === code)) {
-      code = `${base}-${idx}`;
-      idx += 1;
-    }
+    const code = getNextLicensePlate();
     const p: Pallet = {
       id: `pal-${Date.now()}`,
       palletCode: code,
@@ -541,7 +528,7 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     };
     await saveScanEvent(event);
     return p;
-  }, [pallets, saveScanEvent]);
+  }, [pallets, saveScanEvent, getNextLicensePlate]);
 
   // Move pallet to location
   const movePallet = useCallback(async (palletCode: string, locationCode: string): Promise<boolean> => {

@@ -1,17 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import { useWarehouse } from '@/providers/warehouse-provider';
-import { Package, Printer } from 'lucide-react-native';
+import { Package, Printer, Barcode } from 'lucide-react-native';
 
 interface ZPLPreviewProps {
-  palletCode: string;
+  licensePlate: string;
 }
 
-function ZPLPreview({ palletCode }: ZPLPreviewProps) {
+function ZPLPreview({ licensePlate }: ZPLPreviewProps) {
   const zpl = useMemo(() => {
     const workDate = new Date().toISOString().split('T')[0];
-    return `^XA\n^CF0,40\n^FO40,40^FD PALLET ${palletCode} ^FS\n^FO40,90^FD WORK DATE: ${workDate} ^FS\n^FO40,140^FD BUCKET: AUTO  DEPT: AUTO ^FS\n^BY3,3,80^FO40,200^BCN,100,Y,N,N\n^FD PAL:${palletCode} ^FS\n^FO300,200^BQN,2,8\n^FDQA,aca://pallet/${encodeURIComponent(palletCode)}^FS\n^XZ`;
-  }, [palletCode]);
+    return `^XA\n^CF0,40\n^FO40,40^FD LICENSE PLATE ${licensePlate} ^FS\n^FO40,90^FD DATE: ${workDate} ^FS\n^FO40,140^FD TYPE: LP ^FS\n^BY3,3,80^FO40,200^BCN,100,Y,N,N\n^FD LP:${licensePlate} ^FS\n^FO300,200^BQN,2,8\n^FDQA,aca://lp/${encodeURIComponent(licensePlate)}^FS\n^XZ`;
+  }, [licensePlate]);
 
   return (
     <View style={styles.zplBox} testID="zpl-preview">
@@ -26,18 +26,15 @@ export default function PalletLabelScreen() {
   const [department, setDepartment] = useState<string>('EMB');
   const [workDate, setWorkDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
-  const nextCode = useMemo(() => {
-    const base = `PAL-${workDate}-${dayBucket}-${department}`;
-    const exists = pallets.some(p => p.palletCode === base);
-    if (!exists) return base;
-    let i = 2;
-    let candidate = `${base}-${i}`;
-    while (pallets.some(p => p.palletCode === candidate)) {
-      i += 1;
-      candidate = `${base}-${i}`;
-    }
-    return candidate;
-  }, [pallets, workDate, dayBucket, department]);
+  const nextLicensePlate = useMemo(() => {
+    const existing = pallets
+      .map(p => p.palletCode)
+      .filter(c => /^LP\d{6}$/.test(c))
+      .map(c => parseInt(c.replace(/^LP/, ''), 10));
+    const seed = 101000;
+    const next = ((existing.length ? Math.max(...existing) : seed) + 1).toString().padStart(6, '0');
+    return `LP${next}`;
+  }, [pallets]);
 
   const handlePrint = () => {
     Alert.alert('Print', 'Sending ZPL to printer...');
@@ -90,11 +87,11 @@ export default function PalletLabelScreen() {
         </View>
 
         <View style={styles.preview}>
-          <Text style={styles.previewLabel}>Pallet Code</Text>
-          <Text selectable style={styles.code} testID="pallet-code">{nextCode}</Text>
+          <Text style={styles.previewLabel}>Next License Plate</Text>
+          <Text selectable style={styles.code} testID="license-plate-code">{nextLicensePlate}</Text>
         </View>
 
-        <ZPLPreview palletCode={nextCode} />
+        <ZPLPreview licensePlate={nextLicensePlate} />
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -102,9 +99,9 @@ export default function PalletLabelScreen() {
             onPress={async () => {
               try {
                 const p = await createPallet(workDate, dayBucket.toUpperCase(), department.toUpperCase());
-                Alert.alert('Pallet Created', p.palletCode);
+                Alert.alert('License Plate Created', p.palletCode);
               } catch (e) {
-                Alert.alert('Error', 'Failed to create pallet');
+                Alert.alert('Error', 'Failed to create license plate');
               }
             }}
             testID="create-pallet-confirm"
@@ -114,8 +111,8 @@ export default function PalletLabelScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.button, styles.secondary]} onPress={handlePrint} testID="print-zpl">
-            <Printer color="#1e40af" size={20} />
-            <Text style={styles.secondaryText}>Send ZPL to Printer</Text>
+            <Barcode color="#1e40af" size={20} />
+            <Text style={styles.secondaryText}>Send LP ZPL to Printer</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -144,7 +141,7 @@ const styles = StyleSheet.create({
   input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#111827' },
   preview: { marginTop: 8, marginBottom: 12 },
   previewLabel: { fontSize: 12, color: '#6b7280', marginBottom: 4 },
-  code: { fontSize: 16, fontWeight: '700', color: '#1e40af' },
+  code: { fontSize: 18, fontWeight: '800' as const, color: '#111827' },
   zplBox: { backgroundColor: '#0f172a', borderRadius: 8, padding: 12, marginTop: 8 },
   zplText: { color: '#e5e7eb', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, fontSize: 12 },
   actions: { marginTop: 16, gap: 12 },
