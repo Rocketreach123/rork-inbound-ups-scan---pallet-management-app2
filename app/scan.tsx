@@ -413,7 +413,7 @@ export default function ScanScreen() {
           },
           suggestedPallet: {
             id: `pal-${Date.now()}`,
-            palletCode: `PAL-${new Date().toISOString().split('T')[0]}-TOMORROW-EMB`,
+            palletCode: `LP101002`,
             workDate: apiResponse.data.expectedDeliveryDate || new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             dayBucket: 'TOMORROW',
             department: 'EMB',
@@ -1025,7 +1025,7 @@ export default function ScanScreen() {
             style={styles.createPalletButton}
             onPress={async () => {
               const today = new Date().toISOString().split('T')[0];
-              const newPallet = await createPallet(today, 'UNMATCHED', 'PENDING');
+              const newPallet = await createPallet(today, 'MANUAL', 'WAREHOUSE');
               setPalletSearch('');
               Alert.alert('Pallet Created', `Created ${newPallet.palletCode}`);
             }}
@@ -1133,7 +1133,7 @@ export default function ScanScreen() {
                       },
                       suggestedPallet: {
                         id: `pal-${Date.now()}`,
-                        palletCode: `PAL-${new Date().toISOString().split('T')[0]}-TOMORROW-EMB`,
+                        palletCode: `LP101002`,
                         workDate: apiResponse.data.expectedDeliveryDate || new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                         dayBucket: 'TOMORROW',
                         department: 'EMB',
@@ -1175,7 +1175,7 @@ export default function ScanScreen() {
                     },
                     suggestedPallet: {
                       id: `unmatched-${Date.now()}`,
-                      palletCode: `PAL-UNMATCHED-${new Date().toISOString().split('T')[0]}`,
+                      palletCode: `LP101001`,
                       workDate: new Date().toISOString().split('T')[0],
                       dayBucket: 'UNMATCHED',
                       department: 'PENDING',

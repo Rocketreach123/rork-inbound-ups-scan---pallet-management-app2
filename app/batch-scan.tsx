@@ -484,7 +484,7 @@ export default function BatchScanScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.modalBody}>
-              <Text style={styles.errorDescription}>Scan an LP barcode (PAL:XXXXX) to switch, or pick from list.</Text>
+              <Text style={styles.errorDescription}>Scan an LP barcode (LP:LP101001) to switch, or pick from list.</Text>
               <View style={{ maxHeight: 240 }}>
                 <ScrollView>
                   {pallets.filter(p => p.state === 'OPEN').map((p: Pallet) => (

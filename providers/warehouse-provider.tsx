@@ -78,7 +78,10 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
       
       const storedEvents = await AsyncStorage.getItem('scan_events');
       if (storedEvents) {
-        setScanEvents(JSON.parse(storedEvents));
+        const parsed: ScanEvent[] = JSON.parse(storedEvents);
+        const migrated = migrateScanEventsToLP(parsed);
+        setScanEvents(migrated);
+        try { await AsyncStorage.setItem('scan_events', JSON.stringify(migrated)); } catch {}
       }
 
       const storedActivePalletId = await AsyncStorage.getItem('active_pallet_id');
@@ -127,6 +130,10 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     }
   }, [apiEnabled, get]);
 
+  const isLPCode = useCallback((code: string | undefined | null): boolean => {
+    return typeof code === 'string' && /^LP\d{6}$/.test(code);
+  }, []);
+
   const getNextLicensePlate = useCallback((): string => {
     const existing = pallets
       .map(p => p.palletCode)
@@ -136,6 +143,22 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
     const next = ((existing.length ? Math.max(...existing) : seed) + 1).toString().padStart(6, '0');
     return `LP${next}`;
   }, [pallets]);
+
+  const migrateScanEventsToLP = useCallback((events: ScanEvent[]): ScanEvent[] => {
+    return events.map((e) => {
+      if (isLPCode(e.palletCode)) return e;
+      if (e.palletId) {
+        const pal = pallets.find(p => p.id === e.palletId);
+        if (pal && isLPCode(pal.palletCode)) {
+          return { ...e, palletCode: pal.palletCode };
+        }
+      }
+      if (e.palletCode && /^PAL[-:]/i.test(e.palletCode)) {
+        return { ...e, palletCode: e.palletCode.replace(/^PAL[-:]/i, '').trim() };
+      }
+      return e;
+    });
+  }, [pallets, isLPCode]);
 
   // Create unmatched pallet
   const createUnmatchedPallet = useCallback(async (): Promise<UnmatchedPallet> => {

@@ -17,8 +17,8 @@ export default function MovePalletScreen() {
     console.log(`Scanned ${scanMode}:`, data);
     
     if (scanMode === 'pallet') {
-      if (data.startsWith('PAL:') || data.includes('PAL-')) {
-        setPalletCode(data.replace('PAL:', ''));
+      if (/^(PAL|LP)[:\-]/i.test(data) || /^(LP\d{6})$/i.test(data)) {
+        setPalletCode(data.replace(/^(PAL|LP)[:\-]/i, ''));
         setScanMode('location');
       } else {
         Alert.alert('Invalid Scan', 'Please scan a valid pallet barcode');

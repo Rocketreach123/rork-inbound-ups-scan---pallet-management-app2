@@ -8,7 +8,7 @@ export const mockData = {
       poNumber: 'PO123456',
       poId: 'po-1',
       palletId: 'pal-1',
-      palletCode: 'PAL-2025-09-02-TODAY-EMB',
+      palletCode: 'LP101001',
       state: 'ASSIGNED' as const,
       location: 'Z1/A01/B01/L1',
       timestamp: new Date().toISOString(),
@@ -27,7 +27,7 @@ export const mockData = {
       poNumber: 'PO123457',
       poId: 'po-2',
       palletId: 'pal-2',
-      palletCode: 'PAL-2025-09-02-TUE-SP',
+      palletCode: 'LP101002',
       state: 'ASSIGNED' as const,
       location: 'Z1/A02/B03/L2',
       timestamp: new Date().toISOString(),
@@ -45,7 +45,7 @@ export const mockData = {
   pallets: [
     {
       id: 'pal-1',
-      palletCode: 'PAL-2025-09-02-TODAY-EMB',
+      palletCode: 'LP101001',
       workDate: '2025-09-02',
       dayBucket: 'TODAY',
       department: 'EMB',
@@ -55,7 +55,7 @@ export const mockData = {
     },
     {
       id: 'pal-2',
-      palletCode: 'PAL-2025-09-02-TUE-SP',
+      palletCode: 'LP101002',
       workDate: '2025-09-03',
       dayBucket: 'TUE',
       department: 'SP',
@@ -65,7 +65,7 @@ export const mockData = {
     },
     {
       id: 'pal-3',
-      palletCode: 'PAL-2025-09-02-WED-FULF',
+      palletCode: 'LP101003',
       workDate: '2025-09-04',
       dayBucket: 'WED',
       department: 'FULF',
@@ -113,7 +113,7 @@ export const mockData = {
       aisle: 'A01',
       bay: 'B01',
       level: 'L1',
-      currentPallet: 'PAL-2025-09-02-TODAY-EMB',
+      currentPallet: 'LP101001',
     },
     {
       id: 'loc-2',
@@ -130,7 +130,7 @@ export const mockData = {
       aisle: 'A02',
       bay: 'B03',
       level: 'L2',
-      currentPallet: 'PAL-2025-09-02-TUE-SP',
+      currentPallet: 'LP101002',
     },
     {
       id: 'loc-4',
@@ -139,7 +139,7 @@ export const mockData = {
       aisle: 'A05',
       bay: 'B02',
       level: 'L1',
-      currentPallet: 'PAL-2025-09-02-WED-FULF',
+      currentPallet: 'LP101003',
     },
     {
       id: 'loc-5',
@@ -167,7 +167,7 @@ export const mockData = {
       palletId: 'pal-1',
       tracking: '1Z999AA10123456784',
       poNumber: 'PO123456',
-      palletCode: 'PAL-2025-09-02-TODAY-EMB',
+      palletCode: 'LP101001',
       timestamp: new Date(Date.now() - 3600000).toLocaleString(),
     },
     {
@@ -177,7 +177,7 @@ export const mockData = {
       palletId: 'pal-1',
       tracking: '1Z999AA10123456784',
       poNumber: 'PO123456',
-      palletCode: 'PAL-2025-09-02-TODAY-EMB',
+      palletCode: 'LP101001',
       timestamp: new Date(Date.now() - 3500000).toLocaleString(),
     },
     {
@@ -187,7 +187,7 @@ export const mockData = {
       palletId: 'pal-2',
       tracking: '1Z999AA10123456785',
       poNumber: 'PO123457',
-      palletCode: 'PAL-2025-09-02-TUE-SP',
+      palletCode: 'LP101002',
       timestamp: new Date(Date.now() - 1800000).toLocaleString(),
     },
   ],
