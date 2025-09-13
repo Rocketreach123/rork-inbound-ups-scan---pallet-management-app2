@@ -63,6 +63,15 @@ export default function BatchScanScreen() {
   const [historyFilterDate, setHistoryFilterDate] = useState<string | 'TODAY' | 'ALL'>('TODAY');
   const [historyFilterErrorsOnly, setHistoryFilterErrorsOnly] = useState(false);
 
+  const filteredEvents = useMemo<ScanEvent[]>(() => {
+    return scanEvents.filter((e) => {
+      const dateOk = historyFilterDate === 'ALL' || new Date(e.timestamp).toDateString() === new Date().toDateString();
+      const palletOk = historyFilterPalletId === 'ALL' || e.palletId === historyFilterPalletId;
+      const errOk = !historyFilterErrorsOnly || e.eventType.includes('ERROR') || e.eventType.includes('UNMATCHED');
+      return dateOk && palletOk && errOk;
+    });
+  }, [scanEvents, historyFilterDate, historyFilterPalletId, historyFilterErrorsOnly]);
+
   useEffect(() => {
     sessionRef.current = session;
   }, [session]);
@@ -641,15 +650,7 @@ export default function BatchScanScreen() {
               </View>
               <View style={{ height: 8 }} />
               <ScrollView style={{ maxHeight: 380 }}>
-                {useMemo(() => {
-                  const items: ScanEvent[] = scanEvents.filter(e => {
-                    const dateOk = historyFilterDate === 'ALL' || new Date(e.timestamp).toDateString() === new Date().toDateString();
-                    const palletOk = historyFilterPalletId === 'ALL' || e.palletId === historyFilterPalletId;
-                    const errOk = !historyFilterErrorsOnly || (e.eventType.includes('ERROR') || e.eventType.includes('UNMATCHED'));
-                    return dateOk && palletOk && errOk;
-                  });
-                  return items;
-                }, [scanEvents, historyFilterDate, historyFilterPalletId, historyFilterErrorsOnly]).map((e) => (
+                {filteredEvents.map((e) => (
                   <View key={e.id} style={styles.historyRow}>
                     <Text style={styles.historyMain}>{e.eventType.replaceAll('_', ' ')}</Text>
                     <Text style={styles.historySub}>{e.tracking ?? e.palletCode ?? ''}</Text>
