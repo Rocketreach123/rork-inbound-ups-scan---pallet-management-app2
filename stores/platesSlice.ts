@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
-import { getLicensePlates } from '@/api/acaClient';
+import { fetchAllProgressive, getLocations } from '@/api/acaClient';
 import { mapPlates, type Plate } from '@/mappers/platesMapper';
 import { useStorage } from '@/providers/storage-provider';
 import { mapLocations, type Location } from '@/mappers/locationsMapper';
-import { getLocations } from '@/api/acaClient';
 
 export type SyncHealth = 'green' | 'yellow' | 'red';
 
@@ -20,6 +19,7 @@ export const [PlatesProvider, usePlates] = createContextHook(() => {
   const poller = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [locationsIdx, setLocationsIdx] = useState<Map<string, string>>(new Map());
+  const inFlight = useRef<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -54,7 +54,7 @@ export const [PlatesProvider, usePlates] = createContextHook(() => {
 
   const startPolling = () => {
     stopPolling();
-    poller.current = setInterval(() => refresh(), 60000);
+    poller.current = setInterval(() => refresh(), 120000);
   };
 
   const stopPolling = () => {
@@ -63,20 +63,32 @@ export const [PlatesProvider, usePlates] = createContextHook(() => {
   };
 
   const refresh = async (manual = false) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       if (manual) setManualRefreshing(true);
       setError(undefined);
-      const data = await getLicensePlates({ manualRefresh: manual });
-      const mapped = mapPlates(data, locationsIdx);
+      let collectedRaw: any[] = [];
+      let collected: Plate[] = [];
+      await fetchAllProgressive('/license-plates', {
+        manualRefresh: manual,
+        limitQuery: 'limit=200',
+        onBatch: (batch) => {
+          collectedRaw = collectedRaw.concat(batch);
+          const mapped = mapPlates(batch, locationsIdx);
+          collected = collected.concat(mapped);
+          setPlates([...collected]);
+        },
+      });
 
       const rawStrings = new Set<string>();
-      for (const it of data) {
+      for (const it of collectedRaw) {
         for (const v of Object.values(it ?? {})) {
           if (typeof v === 'string') rawStrings.add(v);
         }
       }
       const dummyPattern = /^(LOC-|LP ?\d)/i;
-      const hasDummy = mapped.some((p) => {
+      const hasDummy = collected.some((p) => {
         const candidates: string[] = [p.plate_number].filter(Boolean) as string[];
         return candidates.some((s) => dummyPattern.test(s) && !rawStrings.has(s));
       });
@@ -84,12 +96,12 @@ export const [PlatesProvider, usePlates] = createContextHook(() => {
         throw new Error('Dummy data detected');
       }
 
-      setPlates(mapped);
       setLastSync(Date.now());
-      await storage.setItem(CACHE_KEY, JSON.stringify(mapped));
+      await storage.setItem(CACHE_KEY, JSON.stringify(collected));
     } catch (e: any) {
       setError(e?.message || 'Failed to sync license plates');
     } finally {
+      inFlight.current = false;
       setManualRefreshing(false);
     }
   };

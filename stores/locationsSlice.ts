@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import createContextHook from '@nkzw/create-context-hook';
-import { getLocations } from '@/api/acaClient';
+import { fetchAllProgressive } from '@/api/acaClient';
 import { mapLocations, type Location } from '@/mappers/locationsMapper';
 import { useStorage } from '@/providers/storage-provider';
 
@@ -16,6 +16,7 @@ export const [LocationsProvider, useLocations] = createContextHook(() => {
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [manualRefreshing, setManualRefreshing] = useState<boolean>(false);
   const poller = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inFlight = useRef<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -39,7 +40,7 @@ export const [LocationsProvider, useLocations] = createContextHook(() => {
 
   const startPolling = () => {
     stopPolling();
-    poller.current = setInterval(() => refresh(), 60000);
+    poller.current = setInterval(() => refresh(), 120000);
   };
 
   const stopPolling = () => {
@@ -48,20 +49,32 @@ export const [LocationsProvider, useLocations] = createContextHook(() => {
   };
 
   const refresh = async (manual = false) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       if (manual) setManualRefreshing(true);
       setError(undefined);
-      const data = await getLocations({ manualRefresh: manual });
-      const mapped = mapLocations(data);
+      let collectedRaw: any[] = [];
+      let collected: Location[] = [];
+      await fetchAllProgressive('/locations', {
+        manualRefresh: manual,
+        limitQuery: 'limit=200',
+        onBatch: (batch) => {
+          collectedRaw = collectedRaw.concat(batch);
+          const mapped = mapLocations(batch);
+          collected = collected.concat(mapped);
+          setLocations([...collected]);
+        },
+      });
 
       const rawStrings = new Set<string>();
-      for (const it of data) {
+      for (const it of collectedRaw) {
         for (const v of Object.values(it ?? {})) {
           if (typeof v === 'string') rawStrings.add(v);
         }
       }
       const dummyPattern = /^LOC-/i;
-      const hasDummy = mapped.some((l) => {
+      const hasDummy = collected.some((l) => {
         const candidates: string[] = [l.name, l.code ?? ''].filter(Boolean) as string[];
         return candidates.some((s) => dummyPattern.test(s) && !rawStrings.has(s));
       });
@@ -69,12 +82,12 @@ export const [LocationsProvider, useLocations] = createContextHook(() => {
         throw new Error('Dummy data detected');
       }
 
-      setLocations(mapped);
       setLastSync(Date.now());
-      await storage.setItem(CACHE_KEY, JSON.stringify(mapped));
+      await storage.setItem(CACHE_KEY, JSON.stringify(collected));
     } catch (e: any) {
       setError(e?.message || 'Failed to sync locations');
     } finally {
+      inFlight.current = false;
       setManualRefreshing(false);
     }
   };
