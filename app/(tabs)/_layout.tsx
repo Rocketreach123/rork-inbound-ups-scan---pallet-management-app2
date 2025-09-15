@@ -1,8 +1,12 @@
 import { Tabs } from "expo-router";
 import { Home, Search, Package, Settings } from "lucide-react-native";
 import React from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const baseTabBarHeight = 56 as const;
+
   return (
     <Tabs
       screenOptions={{
@@ -15,9 +19,11 @@ export default function TabLayout() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          height: 60,
-          paddingBottom: 8,
+          // Ensure the tab bar clears Android system navigation by padding for the bottom inset
+          minHeight: baseTabBarHeight + (insets?.bottom ?? 0),
+          paddingBottom: Math.max(insets?.bottom ?? 0, 8),
           paddingTop: 8,
         },
       }}
