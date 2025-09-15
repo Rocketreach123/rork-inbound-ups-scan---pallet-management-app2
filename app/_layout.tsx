@@ -7,6 +7,7 @@ import { WarehouseProvider } from "@/providers/warehouse-provider";
 import { ApiProvider } from "@/providers/api-provider";
 import { ScanProvider } from "@/providers/scan-provider";
 import DeviceModeGate from "@/components/DeviceModeGate";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -105,17 +106,19 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <ApiProvider>
-          <ScanProvider>
-            <WarehouseProvider>
-              <DeviceModeGate />
-              <RootLayoutNav />
-            </WarehouseProvider>
-          </ScanProvider>
-        </ApiProvider>
-      </GestureHandlerRootView>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <ApiProvider>
+            <ScanProvider>
+              <WarehouseProvider>
+                <DeviceModeGate />
+                <RootLayoutNav />
+              </WarehouseProvider>
+            </ScanProvider>
+          </ApiProvider>
+        </GestureHandlerRootView>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
