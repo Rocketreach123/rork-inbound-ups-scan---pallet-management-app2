@@ -9,21 +9,13 @@ export type Location = {
   extra?: Record<string, any>;
 };
 
-const hash = (s: string): string => {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  }
-  return `loc_${Math.abs(h)}`;
-};
-
-export function mapLocation(item: ACAItem): Location {
-  const name: string = (item?.name as string) ?? (item?.label as string) ?? 'Unknown Location';
+export function mapLocation(item: ACAItem): Location | null {
+  const name: string | undefined = (item?.name as string) ?? (item?.label as string) ?? undefined;
+  const id: string | undefined = (item?.id as string) ?? undefined;
+  if (!id || !name) return null;
   const code: string | undefined = (item?.code as string) ?? (item?.slug as string) ?? undefined;
-  const activeRaw: any = (item?.active as any) ?? (item?.enabled as any) ?? true;
-  const active: boolean = typeof activeRaw === 'boolean' ? activeRaw : String(activeRaw).toLowerCase() !== 'false';
-  const id: string = (item?.id as string) ?? hash(((name ?? '') + (code ?? '')).trim() || JSON.stringify(item));
-
+  const activeRaw: any = (item?.active as any) ?? (item?.enabled as any) ?? undefined;
+  const active: boolean | undefined = typeof activeRaw === 'boolean' ? activeRaw : undefined;
   return {
     id,
     name,
@@ -35,5 +27,7 @@ export function mapLocation(item: ACAItem): Location {
 }
 
 export function mapLocations(items: ACAItem[]): Location[] {
-  return items.map(mapLocation);
+  return items
+    .map((it) => mapLocation(it))
+    .filter((v): v is Location => v !== null);
 }
