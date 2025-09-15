@@ -20,9 +20,9 @@ app.use(
   })
 );
 
-// Simple health check endpoint
-app.get("/", (c) => {
-  return c.json({ status: "ok", message: "API is running" });
-});
+// Simple health check endpoints
+app.get("/", (c) => c.json({ status: "ok", message: "API is running" }));
+app.get("/health", (c) => c.json({ status: "ok" }));
+app.get("/healthz", (c) => c.json({ status: "ok" }));
 
 export default app;
