@@ -53,6 +53,22 @@ export const [LocationsProvider, useLocations] = createContextHook(() => {
       setError(undefined);
       const data = await getLocations({ manualRefresh: manual });
       const mapped = mapLocations(data);
+
+      const rawStrings = new Set<string>();
+      for (const it of data) {
+        for (const v of Object.values(it ?? {})) {
+          if (typeof v === 'string') rawStrings.add(v);
+        }
+      }
+      const dummyPattern = /^LOC-/i;
+      const hasDummy = mapped.some((l) => {
+        const candidates: string[] = [l.name, l.code ?? ''].filter(Boolean) as string[];
+        return candidates.some((s) => dummyPattern.test(s) && !rawStrings.has(s));
+      });
+      if (hasDummy) {
+        throw new Error('Dummy data detected');
+      }
+
       setLocations(mapped);
       setLastSync(Date.now());
       await storage.setItem(CACHE_KEY, JSON.stringify(mapped));

@@ -68,6 +68,22 @@ export const [PlatesProvider, usePlates] = createContextHook(() => {
       setError(undefined);
       const data = await getLicensePlates({ manualRefresh: manual });
       const mapped = mapPlates(data, locationsIdx);
+
+      const rawStrings = new Set<string>();
+      for (const it of data) {
+        for (const v of Object.values(it ?? {})) {
+          if (typeof v === 'string') rawStrings.add(v);
+        }
+      }
+      const dummyPattern = /^(LOC-|LP ?\d)/i;
+      const hasDummy = mapped.some((p) => {
+        const candidates: string[] = [p.plate_number].filter(Boolean) as string[];
+        return candidates.some((s) => dummyPattern.test(s) && !rawStrings.has(s));
+      });
+      if (hasDummy) {
+        throw new Error('Dummy data detected');
+      }
+
       setPlates(mapped);
       setLastSync(Date.now());
       await storage.setItem(CACHE_KEY, JSON.stringify(mapped));
