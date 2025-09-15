@@ -26,7 +26,7 @@ export function EnhancedBarcodeScanner({
 
   useEffect(() => {
     let mounted = true;
-    if (flags.scan.device_mode === 'mobile-camera' || flags.scan.device_mode === 'skorpio-x5') {
+    if (flags.scan.device_mode === 'mobile-camera') {
       import('expo-camera')
         .then((m) => {
           if (mounted) setCameraViewComp(() => m.CameraView as unknown as React.ComponentType<any>);
@@ -364,10 +364,10 @@ export function EnhancedBarcodeScanner({
     };
   }, []);
 
-  if (!(flags.scan.device_mode === 'mobile-camera' || flags.scan.device_mode === 'skorpio-x5')) {
+  if (flags.scan.device_mode !== 'mobile-camera') {
     return (
       <View style={styles.container} testID="camera-disabled">
-        <Text style={styles.message}>Camera disabled in current device mode</Text>
+        <Text style={styles.message}>{flags.scan.device_mode === 'skorpio-x5' ? 'Skorpio X5 uses the hardware scanner (keyboard wedge). Focus the input field on this screen to scan.' : 'Camera disabled in current device mode'}</Text>
       </View>
     );
   }

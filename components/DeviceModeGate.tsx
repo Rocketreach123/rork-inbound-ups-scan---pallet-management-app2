@@ -30,11 +30,11 @@ export default function DeviceModeGate() {
   }
 
   if (flags.scan.adapter_lock) {
-    if (flags.scan.device_mode === 'skorpio-x5' && !['datalogic-sdk','datalogic-intent','wedge','camera'].includes(activeAdapter)) {
+    if (flags.scan.device_mode === 'skorpio-x5' && activeAdapter !== 'wedge') {
       return (
         <View style={styles.block} testID="adapter-missing">
           <Text style={styles.title}>Scanner not ready</Text>
-          <Text style={styles.subtitle}>On Skorpio X5, camera scanning is enabled in this build. Ensure camera permission is granted, or bind Datalogic SDK/Intent if using the hardware scanner.</Text>
+          <Text style={styles.subtitle}>On Skorpio X5, the hardware scanner operates as a keyboard wedge. Focus an input field and scan.</Text>
         </View>
       );
     }
