@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { CheckCircle, XCircle, RefreshCw, Database, Globe } from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { CheckCircle, XCircle, RefreshCw, Database, Globe, AlertCircle, Wifi } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { env } from '@/lib/env';
+import * as acaClient from '@/api/acaClient';
+import { useLocations } from '@/stores/locationsSlice';
+import { usePlates } from '@/stores/platesSlice';
 
 interface TestResult {
   name: string;
-  status: 'pending' | 'success' | 'error';
+  status: 'pending' | 'success' | 'error' | 'warning';
   message: string;
   details?: any;
   timestamp?: number;
@@ -15,6 +19,9 @@ export default function ApiTestScreen() {
   const [tests, setTests] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [backendUrl, setBackendUrl] = useState('');
+  
+  const { locations: storeLocations, error: locError } = useLocations();
+  const { plates: storePlates, error: platesError } = usePlates();
 
   const runTests = async () => {
     setIsRunning(true);
@@ -230,7 +237,7 @@ export default function ApiTestScreen() {
       
       const { total } = await acaClient.fetchAllProgressive('/locations', {
         limitQuery: 'limit=50',
-        onBatch: (batch) => {
+        onBatch: (batch: any[]) => {
           batchCount++;
           itemsPerBatch.push(batch.length);
           console.log(`[API TEST] Batch ${batchCount}: ${batch.length} items`);
@@ -261,9 +268,9 @@ export default function ApiTestScreen() {
     }
 
     // Test 7: Store Data Verification
-    const storeHasDummy = storeLocations.some(loc => 
+    const storeHasDummy = storeLocations.some((loc: any) => 
       /^LOC-/.test(loc.name) || /^LOC-/.test(loc.code || '')
-    ) || storePlates.some(plate => 
+    ) || storePlates.some((plate: any) => 
       /^LP\s?\d/.test(plate.plate_number) && plate.plate_number.length < 10
     );
 
@@ -282,8 +289,8 @@ export default function ApiTestScreen() {
       details: {
         locations: storeLocations.length,
         plates: storePlates.length,
-        locError,
-        platesError,
+        locError: locError || null,
+        platesError: platesError || null,
         hasDummy: storeHasDummy
       },
       timestamp: Date.now()
