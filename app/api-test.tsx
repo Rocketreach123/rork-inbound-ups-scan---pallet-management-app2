@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { CheckCircle, XCircle, AlertCircle, RefreshCw, Database, Globe, Wifi, Clock } from 'lucide-react-native';
-import { env } from '@/lib/env';
-import * as acaClient from '@/api/acaClient';
-import { useLocations } from '@/stores/locationsSlice';
-import { usePlates } from '@/stores/platesSlice';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { CheckCircle, XCircle, RefreshCw, Database, Globe } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface TestResult {
   name: string;
-  status: 'pending' | 'success' | 'error' | 'warning';
+  status: 'pending' | 'success' | 'error';
   message: string;
   details?: any;
   timestamp?: number;
@@ -18,8 +15,6 @@ export default function ApiTestScreen() {
   const [tests, setTests] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [backendUrl, setBackendUrl] = useState('');
-  const { locations: storeLocations, error: locError } = useLocations();
-  const { plates: storePlates, error: platesError } = usePlates();
 
   const runTests = async () => {
     setIsRunning(true);

@@ -4,16 +4,6 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-// Temporarily comment out providers to isolate the issue
-// import { WarehouseProvider } from "@/providers/warehouse-provider";
-import { ApiProvider } from "@/providers/api-provider";
-import { ScanProvider } from "@/providers/scan-provider";
-import { StorageProvider } from "@/providers/storage-provider";
-import { LocationsProvider } from "@/stores/locationsSlice";
-import { PlatesProvider } from "@/stores/platesSlice";
-// import DeviceModeGate from "@/components/DeviceModeGate";
-// import { GlobalBarcodeListener } from "@/components/GlobalBarcodeListener";
-import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -193,23 +183,11 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={styles.root}>
-          <StorageProvider>
-            <LocationsProvider>
-              <PlatesProvider>
-                <ApiProvider>
-                  <ScanProvider>
-                    <RootLayoutNav />
-                  </ScanProvider>
-                </ApiProvider>
-              </PlatesProvider>
-            </LocationsProvider>
-          </StorageProvider>
-        </GestureHandlerRootView>
-      </QueryClientProvider>
-    </trpc.Provider>
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={styles.root}>
+        <RootLayoutNav />
+      </GestureHandlerRootView>
+    </QueryClientProvider>
   );
 }
 
