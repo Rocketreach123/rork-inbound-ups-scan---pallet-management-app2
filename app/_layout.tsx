@@ -11,6 +11,7 @@ import { StorageProvider } from "@/providers/storage-provider";
 import { LocationsProvider } from "@/stores/locationsSlice";
 import { PlatesProvider } from "@/stores/platesSlice";
 import DeviceModeGate from "@/components/DeviceModeGate";
+import { GlobalBarcodeListener } from "@/components/GlobalBarcodeListener";
 import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
@@ -201,6 +202,7 @@ export default function RootLayout() {
                   <ScanProvider>
                     <WarehouseProvider>
                       <DeviceModeGate />
+                      <GlobalBarcodeListener />
                       <RootLayoutNav />
                     </WarehouseProvider>
                   </ScanProvider>

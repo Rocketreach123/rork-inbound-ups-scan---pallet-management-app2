@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Search, Package, Settings } from "lucide-react-native";
+import { Home, Search, Package, Settings, Shield } from "lucide-react-native";
 import React from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Platform } from "react-native";
@@ -58,6 +58,13 @@ export default function TabLayout() {
         options={{
           title: "Settings",
           tabBarIcon: ({ color }) => <Settings color={color} size={18} />,
+        }}
+      />
+      <Tabs.Screen
+        name="test"
+        options={{
+          title: "Test",
+          tabBarIcon: ({ color }) => <Shield color={color} size={18} />,
         }}
       />
     </Tabs>
