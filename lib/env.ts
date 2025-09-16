@@ -20,6 +20,7 @@ export function loadEnv(): Env {
   const ACA_API_KEY = 'proxy'; // Not needed when using proxy
   
   console.log('[env] Using backend proxy for ACA API:', ACA_API_BASE);
+  console.log('[env] Backend URL:', backendUrl);
   
   return { ACA_API_BASE, ACA_API_KEY };
 }

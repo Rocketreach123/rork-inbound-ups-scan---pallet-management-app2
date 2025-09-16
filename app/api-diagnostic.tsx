@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Alert } from 'react-native';
 import { CheckCircle, XCircle, AlertCircle, RefreshCw, Server, Globe, Database, Wifi, Shield } from 'lucide-react-native';
 import { env } from '@/lib/env';
+import { getLocations, getLicensePlates } from '@/api/acaClient';
+import { useLocations } from '@/stores/locationsSlice';
+import { usePlates } from '@/stores/platesSlice';
 
 interface DiagnosticResult {
   name: string;
@@ -15,6 +18,8 @@ export default function ApiDiagnosticScreen() {
   const [results, setResults] = useState<DiagnosticResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [apiData, setApiData] = useState<any>({});
+  const { locations: storeLocations, refresh: refreshLocations, error: locError } = useLocations();
+  const { plates: storePlates, refresh: refreshPlates, error: platesError } = usePlates();
 
   const runDiagnostics = async () => {
     setIsRunning(true);
@@ -219,24 +224,129 @@ export default function ApiDiagnosticScreen() {
       }
     }
 
-    // 6. Check for dummy data patterns
+    // 6. Test acaClient functions
+    if (backendUrl) {
+      try {
+        console.log('[DIAGNOSTIC] Testing acaClient.getLocations...');
+        const clientLocations = await getLocations({ manualRefresh: true });
+        data.clientLocations = clientLocations;
+        
+        const hasDummyLoc = clientLocations.some((loc: any) => {
+          const id = String(loc.id || '');
+          const name = String(loc.name || loc.label || '');
+          return id.includes('LOC-') || name.includes('LOC-');
+        });
+        
+        diagnostics.push({
+          name: '🔌 ACA Client (Locations)',
+          status: clientLocations.length > 0 ? (hasDummyLoc ? 'error' : 'success') : 'warning',
+          message: hasDummyLoc 
+            ? `DUMMY DATA DETECTED! ${clientLocations.length} locations`
+            : `${clientLocations.length} real locations loaded`,
+          details: {
+            count: clientLocations.length,
+            hasDummy: hasDummyLoc,
+            sample: clientLocations[0]
+          },
+          solution: hasDummyLoc ? 'API is returning mock data - check backend proxy' : undefined
+        });
+      } catch (error: any) {
+        diagnostics.push({
+          name: '🔌 ACA Client (Locations)',
+          status: 'error',
+          message: 'Client fetch failed',
+          details: { error: error.message },
+          solution: 'Check acaClient configuration'
+        });
+      }
+      
+      try {
+        console.log('[DIAGNOSTIC] Testing acaClient.getLicensePlates...');
+        const clientPlates = await getLicensePlates({ manualRefresh: true });
+        data.clientPlates = clientPlates;
+        
+        const hasDummyPlate = clientPlates.some((plate: any) => {
+          const plateNum = String(plate.plate_number || plate.plate || plate.tag || '');
+          return plateNum.match(/^LP ?\d/);
+        });
+        
+        diagnostics.push({
+          name: '🔌 ACA Client (Plates)',
+          status: clientPlates.length > 0 ? (hasDummyPlate ? 'error' : 'success') : 'warning',
+          message: hasDummyPlate 
+            ? `DUMMY DATA DETECTED! ${clientPlates.length} plates`
+            : `${clientPlates.length} real plates loaded`,
+          details: {
+            count: clientPlates.length,
+            hasDummy: hasDummyPlate,
+            sample: clientPlates[0]
+          },
+          solution: hasDummyPlate ? 'API is returning mock data - check backend proxy' : undefined
+        });
+      } catch (error: any) {
+        diagnostics.push({
+          name: '🔌 ACA Client (Plates)',
+          status: 'error',
+          message: 'Client fetch failed',
+          details: { error: error.message },
+          solution: 'Check acaClient configuration'
+        });
+      }
+    }
+    
+    // 7. Check store state
+    diagnostics.push({
+      name: '💾 Store (Locations)',
+      status: storeLocations.length > 0 ? 'success' : 'warning',
+      message: `${storeLocations.length} locations in store`,
+      details: {
+        count: storeLocations.length,
+        error: locError,
+        sample: storeLocations[0]
+      }
+    });
+    
+    diagnostics.push({
+      name: '💾 Store (Plates)',
+      status: storePlates.length > 0 ? 'success' : 'warning',
+      message: `${storePlates.length} plates in store`,
+      details: {
+        count: storePlates.length,
+        error: platesError,
+        sample: storePlates[0]
+      }
+    });
+    
+    // 8. Check for dummy data patterns
     const checkForDummy = (data: any, type: string) => {
+      if (!data) return false;
       const str = JSON.stringify(data);
       const patterns = [/LOC-\d+/, /LP ?\d{3,}/, /TEST-/, /DEMO-/, /MOCK-/];
       return patterns.some(p => p.test(str));
     };
 
-    if (data.locationsResponse) {
-      const hasDummy = checkForDummy(data.locationsResponse, 'locations');
-      diagnostics.push({
-        name: '✅ Data Validation',
-        status: hasDummy ? 'warning' : 'success',
-        message: hasDummy ? 'Possible dummy data detected' : 'Data appears to be real',
-        details: { type: 'locations', hasDummy }
-      });
-    }
+    const anyDummyData = 
+      checkForDummy(data.locationsResponse, 'locations') ||
+      checkForDummy(data.platesResponse, 'plates') ||
+      checkForDummy(data.clientLocations, 'clientLoc') ||
+      checkForDummy(data.clientPlates, 'clientPlates');
+      
+    diagnostics.push({
+      name: '✅ Data Validation',
+      status: anyDummyData ? 'error' : 'success',
+      message: anyDummyData ? 'DUMMY DATA DETECTED IN SYSTEM!' : 'All data appears to be real',
+      details: { 
+        hasAnyDummy: anyDummyData,
+        sources: {
+          directAPI: checkForDummy(data.locationsResponse, 'loc') || checkForDummy(data.platesResponse, 'pl'),
+          acaClient: checkForDummy(data.clientLocations, 'cl') || checkForDummy(data.clientPlates, 'cp'),
+          stores: checkForDummy(storeLocations, 'sl') || checkForDummy(storePlates, 'sp')
+        }
+      },
+      solution: anyDummyData ? 'Check backend proxy is using real ACA API endpoints' : undefined
+    })
 
-    // 7. Network diagnostics
+    // 9. Network diagnostics
     diagnostics.push({
       name: '🌐 Network Info',
       status: 'success',
@@ -276,6 +386,31 @@ export default function ApiDiagnosticScreen() {
       errors: errorCount,
       data
     });
+    
+    // Alert if dummy data detected
+    const hasDummy = diagnostics.some(d => d.message.includes('DUMMY DATA'));
+    if (hasDummy) {
+      Alert.alert(
+        '⚠️ Dummy Data Detected',
+        'The system is showing mock/dummy data instead of real API data. Check the backend configuration.',
+        [{ text: 'OK' }]
+      );
+    } else if (errorCount === 0 && warningCount === 0) {
+      Alert.alert(
+        '✅ All Tests Passed',
+        'API is fully operational with live data.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+  
+  const refreshStores = async () => {
+    console.log('[DIAGNOSTIC] Refreshing stores...');
+    await Promise.all([
+      refreshLocations(true),
+      refreshPlates(true)
+    ]);
+    Alert.alert('✅ Stores Refreshed', 'Location and plate stores have been refreshed.');
   };
 
   useEffect(() => {
@@ -317,9 +452,22 @@ export default function ApiDiagnosticScreen() {
           <RefreshCw color={isRunning ? '#9ca3af' : '#1e40af'} size={20} />
         </TouchableOpacity>
       </View>
+      
+      <View style={styles.actions}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={refreshStores}
+        >
+          <Database color="#fff" size={16} />
+          <Text style={styles.actionText}>Refresh Stores</Text>
+        </TouchableOpacity>
+      </View>
 
       {results.map((result, index) => (
-        <View key={`${result.name}-${index}`} style={styles.card}>
+        <View key={`${result.name}-${index}`} style={[
+          styles.card,
+          result.message.includes('DUMMY DATA') && styles.cardError
+        ]}>
           <View style={styles.cardHeader}>
             {getIcon(result.status)}
             <Text style={styles.cardTitle}>{result.name}</Text>
@@ -439,5 +587,28 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#9ca3af',
     fontSize: 14,
+  },
+  actions: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e40af',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  actionText: {
+    color: '#fff',
+    fontWeight: '600' as const,
+    fontSize: 14,
+  },
+  cardError: {
+    borderWidth: 2,
+    borderColor: '#ef4444',
   },
 });
