@@ -25,7 +25,7 @@ function RootLayoutNav() {
       headerTintColor: '#fff',
       headerTitleStyle: {
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 14, // Reduced from 16
       },
       headerTitleAlign: 'center',
     }}>
@@ -40,7 +40,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 16,
+            fontSize: 14, // Reduced from 16
           },
     
         }} 
@@ -55,7 +55,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 16,
+            fontSize: 14, // Reduced from 16
           },
     
         }} 
@@ -70,7 +70,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 16,
+            fontSize: 14, // Reduced from 16
           },
     
         }} 
@@ -85,7 +85,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 16,
+            fontSize: 14, // Reduced from 16
           },
     
         }} 
@@ -100,7 +100,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 16,
+            fontSize: 14, // Reduced from 16
           },
     
         }} 
@@ -115,7 +115,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 16,
+            fontSize: 14, // Reduced from 16
           },
     
         }} 
@@ -130,7 +130,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 16,
+            fontSize: 14, // Reduced from 16
           },
     
         }} 
