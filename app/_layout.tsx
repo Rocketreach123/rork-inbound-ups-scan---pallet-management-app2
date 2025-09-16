@@ -7,6 +7,9 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { WarehouseProvider } from "@/providers/warehouse-provider";
 import { ApiProvider } from "@/providers/api-provider";
 import { ScanProvider } from "@/providers/scan-provider";
+import { StorageProvider } from "@/providers/storage-provider";
+import { LocationsProvider } from "@/stores/locationsSlice";
+import { PlatesProvider } from "@/stores/platesSlice";
 import DeviceModeGate from "@/components/DeviceModeGate";
 import { trpc, trpcClient } from "@/lib/trpc";
 
@@ -135,6 +138,48 @@ function RootLayoutNav() {
     
         }} 
       />
+      <Stack.Screen 
+        name="api-test" 
+        options={{ 
+          title: "API Connection Test",
+          presentation: "modal",
+          headerStyle: {
+            backgroundColor: '#1e40af',
+          },
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 14,
+          },
+        }} 
+      />
+      <Stack.Screen 
+        name="locations-view" 
+        options={{ 
+          title: "ACA Locations",
+          presentation: "modal",
+          headerStyle: {
+            backgroundColor: '#1e40af',
+          },
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 14,
+          },
+        }} 
+      />
+      <Stack.Screen 
+        name="plates-view" 
+        options={{ 
+          title: "ACA License Plates",
+          presentation: "modal",
+          headerStyle: {
+            backgroundColor: '#1e40af',
+          },
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 14,
+          },
+        }} 
+      />
     </Stack>
   );
 }
@@ -149,14 +194,20 @@ export default function RootLayout() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={styles.root}>
-          <ApiProvider>
-            <ScanProvider>
-              <WarehouseProvider>
-                <DeviceModeGate />
-                <RootLayoutNav />
-              </WarehouseProvider>
-            </ScanProvider>
-          </ApiProvider>
+          <StorageProvider>
+            <LocationsProvider>
+              <PlatesProvider>
+                <ApiProvider>
+                  <ScanProvider>
+                    <WarehouseProvider>
+                      <DeviceModeGate />
+                      <RootLayoutNav />
+                    </WarehouseProvider>
+                  </ScanProvider>
+                </ApiProvider>
+              </PlatesProvider>
+            </LocationsProvider>
+          </StorageProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>
     </trpc.Provider>

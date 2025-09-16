@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Switch, Platform, Modal } from 'react-native';
-import { User, Printer, MapPin, Bell, Shield, ChevronRight, LogOut, Cable, Smartphone, Radio, Bluetooth, Scan } from 'lucide-react-native';
+import { User, Printer, MapPin, Bell, Shield, ChevronRight, LogOut, Cable, Smartphone, Radio, Bluetooth, Scan, Database } from 'lucide-react-native';
 import { useWarehouse } from '@/providers/warehouse-provider';
 import ApiConfigSheet from '@/components/ApiConfigSheet';
 import { useApi } from '@/providers/api-provider';
 import { useScan, DeviceMode } from '@/providers/scan-provider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
 export default function SettingsScreen() {
   const { settings, updateSettings } = useWarehouse();
@@ -13,6 +14,7 @@ export default function SettingsScreen() {
   const [apiVisible, setApiVisible] = useState<boolean>(false);
   const { deviceMode, setDeviceMode, flags } = useScan();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const settingsSections = [
     {
@@ -53,6 +55,13 @@ export default function SettingsScreen() {
           value: apiEnabled ? 'Connected' : 'Not configured',
           action: 'modal',
           onPress: () => setApiVisible(true),
+        },
+        {
+          icon: Database,
+          label: 'API Test & Diagnostics',
+          value: 'Run tests',
+          action: 'navigate',
+          onPress: () => router.push('/api-test'),
         },
       ],
     },
@@ -164,7 +173,7 @@ export default function SettingsScreen() {
                   styles.settingItem,
                   itemIndex === section.items.length - 1 && styles.lastItem,
                 ]}
-                disabled={item.action === 'toggle'}
+                disabled={item.action === 'toggle' || item.action === 'custom'}
                 onPress={item.onPress}
                 testID={`settings-item-${item.label.replace(/\s+/g, '-').toLowerCase()}`}
               >
