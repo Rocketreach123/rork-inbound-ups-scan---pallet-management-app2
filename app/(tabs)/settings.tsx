@@ -58,10 +58,17 @@ export default function SettingsScreen() {
         },
         {
           icon: Database,
-          label: 'API Test & Diagnostics',
+          label: 'API Test',
           value: 'Run tests',
           action: 'navigate',
           onPress: () => router.push('/api-test'),
+        },
+        {
+          icon: Shield,
+          label: 'API Diagnostics',
+          value: 'Check connectivity',
+          action: 'navigate',
+          onPress: () => router.push('/api-diagnostic'),
         },
       ],
     },

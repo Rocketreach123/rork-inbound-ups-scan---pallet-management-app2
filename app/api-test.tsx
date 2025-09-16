@@ -17,6 +17,7 @@ interface TestResult {
 export default function ApiTestScreen() {
   const [tests, setTests] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [backendUrl, setBackendUrl] = useState('');
   const { locations: storeLocations, error: locError } = useLocations();
   const { plates: storePlates, error: platesError } = usePlates();
 
@@ -25,25 +26,85 @@ export default function ApiTestScreen() {
     const results: TestResult[] = [];
     console.log('[API TEST] Starting comprehensive API tests...');
     console.log('[API TEST] Environment:', { base: env.ACA_API_BASE, key: env.ACA_API_KEY ? 'SET' : 'NOT SET' });
+    
+    // Determine backend URL
+    const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'http://localhost:3000';
+    setBackendUrl(baseUrl);
 
-    // Test 1: Environment Variables
+    // Test 0: Backend Health Check
+    try {
+      console.log('[API TEST] Testing backend health...');
+      const healthUrl = `${baseUrl}/api/health`;
+      const healthResponse = await fetch(healthUrl, { signal: AbortSignal.timeout(5000) });
+      const healthData = await healthResponse.json();
+      
+      results.push({
+        name: '🏥 Backend Health',
+        status: healthResponse.ok ? 'success' : 'error',
+        message: healthResponse.ok ? 'Backend is running' : 'Backend not responding',
+        details: { url: healthUrl, status: healthResponse.status },
+        timestamp: Date.now()
+      });
+    } catch (error: any) {
+      console.error('[API TEST] Backend health check failed:', error);
+      results.push({
+        name: '🏥 Backend Health',
+        status: 'error',
+        message: `Backend not reachable: ${error.message}`,
+        details: { url: `${baseUrl}/api/health`, error: error.message },
+        timestamp: Date.now()
+      });
+    }
+
+    // Test 1: Backend Proxy Test
+    try {
+      console.log('[API TEST] Testing backend proxy...');
+      const proxyTestUrl = `${baseUrl}/api/aca/test`;
+      const proxyResponse = await fetch(proxyTestUrl, { signal: AbortSignal.timeout(15000) });
+      const proxyData = await proxyResponse.json();
+      
+      console.log('[API TEST] Proxy test response:', proxyData);
+      
+      const isSuccess = proxyData.status === 'ok';
+      results.push({
+        name: '🔄 Backend ACA Proxy',
+        status: isSuccess ? 'success' : 'error',
+        message: isSuccess 
+          ? `Proxy working: ${proxyData.summary?.locationsOk ? '✓' : '✗'} Locations, ${proxyData.summary?.licensePlatesOk ? '✓' : '✗'} Plates`
+          : 'Proxy test failed',
+        details: proxyData.summary || proxyData,
+        timestamp: Date.now()
+      });
+    } catch (error: any) {
+      console.error('[API TEST] Proxy test failed:', error);
+      results.push({
+        name: '🔄 Backend ACA Proxy',
+        status: 'error',
+        message: `Proxy test failed: ${error.message}`,
+        details: { error: error.message },
+        timestamp: Date.now()
+      });
+    }
+
+    // Test 2: Environment Variables
     results.push({
       name: '🔧 Environment Configuration',
       status: env.ACA_API_BASE && env.ACA_API_KEY ? 'success' : 'error',
       message: env.ACA_API_BASE && env.ACA_API_KEY 
-        ? `API Base: ${env.ACA_API_BASE}` 
+        ? `Using proxy: ${env.ACA_API_BASE}` 
         : 'Missing environment variables',
       details: {
         base: env.ACA_API_BASE || 'NOT SET',
-        key: env.ACA_API_KEY ? '***' + env.ACA_API_KEY.slice(-4) : 'NOT SET'
+        key: env.ACA_API_KEY ? '***' + env.ACA_API_KEY.slice(-4) : 'NOT SET',
+        backend: baseUrl
       },
       timestamp: Date.now()
     });
 
-    // Test 2: Direct API Connection
+    // Test 3: Direct Proxy Connection
     try {
-      console.log('[API TEST] Testing direct API connection...');
-      const testUrl = `${env.ACA_API_BASE}/locations?service_key=${encodeURIComponent(env.ACA_API_KEY || '')}&limit=1`;
+      console.log('[API TEST] Testing direct proxy connection...');
+      const testUrl = `${env.ACA_API_BASE}/locations?limit=1`;
       const startTime = Date.now();
       const response = await fetch(testUrl, { signal: AbortSignal.timeout(10000) });
       const responseTime = Date.now() - startTime;
@@ -51,7 +112,7 @@ export default function ApiTestScreen() {
       console.log('[API TEST] Direct API response:', response.status, response.statusText);
       
       results.push({
-        name: '🌐 Direct API Connection',
+        name: '🌐 Proxy API Connection',
         status: response.ok ? 'success' : 'error',
         message: `API responded with ${response.status} in ${responseTime}ms`,
         details: {
@@ -68,7 +129,7 @@ export default function ApiTestScreen() {
     } catch (error: any) {
       console.error('[API TEST] Direct connection failed:', error);
       results.push({
-        name: '🌐 Direct API Connection',
+        name: '🌐 Proxy API Connection',
         status: 'error',
         message: `Connection failed: ${error.message}`,
         details: { error: error.message },
@@ -76,7 +137,7 @@ export default function ApiTestScreen() {
       });
     }
 
-    // Test 3: Locations API
+    // Test 4: Locations API
     try {
       console.log('[API TEST] Fetching locations...');
       const startTime = Date.now();
@@ -121,7 +182,7 @@ export default function ApiTestScreen() {
       });
     }
 
-    // Test 4: License Plates API
+    // Test 5: License Plates API
     try {
       console.log('[API TEST] Fetching license plates...');
       const startTime = Date.now();
@@ -166,7 +227,7 @@ export default function ApiTestScreen() {
       });
     }
 
-    // Test 5: Progressive Fetch Test
+    // Test 6: Progressive Fetch Test
     try {
       console.log('[API TEST] Testing progressive fetch...');
       let batchCount = 0;
@@ -204,7 +265,7 @@ export default function ApiTestScreen() {
       });
     }
 
-    // Test 6: Store Data Verification
+    // Test 7: Store Data Verification
     const storeHasDummy = storeLocations.some(loc => 
       /^LOC-/.test(loc.name) || /^LOC-/.test(loc.code || '')
     ) || storePlates.some(plate => 
@@ -233,10 +294,10 @@ export default function ApiTestScreen() {
       timestamp: Date.now()
     });
 
-    // Test 7: API Response Format
+    // Test 8: API Response Format
     try {
       console.log('[API TEST] Checking API response format...');
-      const testUrl = `${env.ACA_API_BASE}/locations?service_key=${encodeURIComponent(env.ACA_API_KEY || '')}&limit=1`;
+      const testUrl = `${env.ACA_API_BASE}/locations?limit=1`;
       const response = await fetch(testUrl);
       const data = await response.json();
       
@@ -354,7 +415,14 @@ export default function ApiTestScreen() {
       <View style={styles.summary}>
         <Globe color="#6b7280" size={16} />
         <Text style={styles.summaryText}>
-          {env.ACA_API_BASE || 'No API configured'}
+          Backend: {backendUrl || 'Not connected'}
+        </Text>
+      </View>
+      
+      <View style={styles.summary}>
+        <Wifi color="#6b7280" size={16} />
+        <Text style={styles.summaryText}>
+          Proxy: {env.ACA_API_BASE || 'No API configured'}
         </Text>
       </View>
 
