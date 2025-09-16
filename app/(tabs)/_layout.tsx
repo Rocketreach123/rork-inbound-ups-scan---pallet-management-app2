@@ -1,13 +1,13 @@
 import { Tabs } from "expo-router";
-import { Home, Search, Package, Settings, Shield } from "lucide-react-native";
+import { Home, Search, Package, Settings } from "lucide-react-native";
 import React from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Platform } from "react-native";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
-  const baseTabBarHeight = 36 as const; // Reduced from 44
-  const androidFallbackBottomInset = Platform.OS === 'android' ? 12 : 0; // Reduced from 18
+  const baseTabBarHeight = 44 as const;
+  const androidFallbackBottomInset = Platform.OS === 'android' ? 18 : 0;
 
   return (
     <Tabs
@@ -20,10 +20,10 @@ export default function TabLayout() {
         headerTintColor: '#fff',
         headerTitleStyle: {
           fontWeight: 'bold',
-          fontSize: 14, // Reduced from 16
+          fontSize: 16,
         },
         tabBarHideOnKeyboard: true,
-        tabBarLabelStyle: { fontSize: 10 }, // Reduced from 11
+        tabBarLabelStyle: { fontSize: 11 },
         tabBarStyle: {
           minHeight: baseTabBarHeight + Math.max(insets?.bottom ?? 0, androidFallbackBottomInset),
           backgroundColor: '#ffffff',
@@ -36,35 +36,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color }) => <Home color={color} size={18} />,
+          tabBarIcon: ({ color }) => <Home color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="operations"
         options={{
           title: "Operations",
-          tabBarIcon: ({ color }) => <Package color={color} size={18} />,
+          tabBarIcon: ({ color }) => <Package color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: "Search",
-          tabBarIcon: ({ color }) => <Search color={color} size={18} />,
+          tabBarIcon: ({ color }) => <Search color={color} size={20} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
-          tabBarIcon: ({ color }) => <Settings color={color} size={18} />,
-        }}
-      />
-      <Tabs.Screen
-        name="test"
-        options={{
-          title: "Test",
-          tabBarIcon: ({ color }) => <Shield color={color} size={18} />,
+          tabBarIcon: ({ color }) => <Settings color={color} size={20} />,
         }}
       />
     </Tabs>

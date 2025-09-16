@@ -4,6 +4,11 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { WarehouseProvider } from "@/providers/warehouse-provider";
+import { ApiProvider } from "@/providers/api-provider";
+import { ScanProvider } from "@/providers/scan-provider";
+import DeviceModeGate from "@/components/DeviceModeGate";
+import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -20,7 +25,7 @@ function RootLayoutNav() {
       headerTintColor: '#fff',
       headerTitleStyle: {
         fontWeight: 'bold',
-        fontSize: 14, // Reduced from 16
+        fontSize: 16,
       },
       headerTitleAlign: 'center',
     }}>
@@ -35,7 +40,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 14, // Reduced from 16
+            fontSize: 16,
           },
     
         }} 
@@ -50,7 +55,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 14, // Reduced from 16
+            fontSize: 16,
           },
     
         }} 
@@ -65,7 +70,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 14, // Reduced from 16
+            fontSize: 16,
           },
     
         }} 
@@ -80,7 +85,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 14, // Reduced from 16
+            fontSize: 16,
           },
     
         }} 
@@ -95,7 +100,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 14, // Reduced from 16
+            fontSize: 16,
           },
     
         }} 
@@ -110,7 +115,7 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 14, // Reduced from 16
+            fontSize: 16,
           },
     
         }} 
@@ -125,51 +130,9 @@ function RootLayoutNav() {
           },
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 14, // Reduced from 16
+            fontSize: 16,
           },
     
-        }} 
-      />
-      <Stack.Screen 
-        name="api-test" 
-        options={{ 
-          title: "API Connection Test",
-          presentation: "modal",
-          headerStyle: {
-            backgroundColor: '#1e40af',
-          },
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontSize: 14,
-          },
-        }} 
-      />
-      <Stack.Screen 
-        name="locations-view" 
-        options={{ 
-          title: "ACA Locations",
-          presentation: "modal",
-          headerStyle: {
-            backgroundColor: '#1e40af',
-          },
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontSize: 14,
-          },
-        }} 
-      />
-      <Stack.Screen 
-        name="plates-view" 
-        options={{ 
-          title: "ACA License Plates",
-          presentation: "modal",
-          headerStyle: {
-            backgroundColor: '#1e40af',
-          },
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontSize: 14,
-          },
         }} 
       />
     </Stack>
@@ -183,11 +146,20 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={styles.root}>
-        <RootLayoutNav />
-      </GestureHandlerRootView>
-    </QueryClientProvider>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={styles.root}>
+          <ApiProvider>
+            <ScanProvider>
+              <WarehouseProvider>
+                <DeviceModeGate />
+                <RootLayoutNav />
+              </WarehouseProvider>
+            </ScanProvider>
+          </ApiProvider>
+        </GestureHandlerRootView>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
 

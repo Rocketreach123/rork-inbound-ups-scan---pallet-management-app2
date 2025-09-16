@@ -88,7 +88,7 @@ export const [ScanProvider, useScan] = createContextHook<ScanProviderState>(() =
       const nextFlags: ScanFlagsConfig = {
         ...DEFAULT_FLAGS,
         scan: { ...DEFAULT_FLAGS.scan, device_mode: initialMode },
-        ui: { ...DEFAULT_FLAGS.ui, show_camera_controls: initialMode === 'mobile-camera' },
+        ui: { ...DEFAULT_FLAGS.ui, show_camera_controls: initialMode === 'mobile-camera' || initialMode === 'skorpio-x5' },
       };
       setDeviceModeState(initialMode);
       setFlags(nextFlags);
@@ -100,7 +100,7 @@ export const [ScanProvider, useScan] = createContextHook<ScanProviderState>(() =
     const nextFlags: ScanFlagsConfig = {
       ...DEFAULT_FLAGS,
       scan: { ...DEFAULT_FLAGS.scan, device_mode: mode },
-      ui: { ...DEFAULT_FLAGS.ui, show_camera_controls: mode === 'mobile-camera' },
+      ui: { ...DEFAULT_FLAGS.ui, show_camera_controls: mode === 'mobile-camera' || mode === 'skorpio-x5' },
     };
     setFlags(nextFlags);
     setDeviceModeState(mode);
@@ -110,11 +110,8 @@ export const [ScanProvider, useScan] = createContextHook<ScanProviderState>(() =
       setTimeout(() => window.location.reload(), 100);
     } else {
       // Mobile platforms should re-bind
-      if (mode === 'mobile-camera') {
+      if (mode === 'mobile-camera' || mode === 'skorpio-x5') {
         setActiveAdapter('camera');
-        setIsBound(true);
-      } else if (mode === 'skorpio-x5') {
-        setActiveAdapter('wedge');
         setIsBound(true);
       }
     }
@@ -123,7 +120,7 @@ export const [ScanProvider, useScan] = createContextHook<ScanProviderState>(() =
   const resolveAdapterForMode = useCallback((mode: DeviceMode | null): Adapter => {
     if (mode === 'mobile-camera') return 'camera';
     if (mode === 'external-wedge') return 'wedge';
-    if (mode === 'skorpio-x5') return 'wedge';
+    if (mode === 'skorpio-x5') return 'camera';
     return 'none';
   }, []);
 
@@ -131,11 +128,8 @@ export const [ScanProvider, useScan] = createContextHook<ScanProviderState>(() =
     setIsBound(false);
     const adapter = resolveAdapterForMode(deviceMode);
     setActiveAdapter(adapter);
-    if (deviceMode === 'mobile-camera' && adapter === 'camera') {
+    if ((deviceMode === 'mobile-camera' || deviceMode === 'skorpio-x5') && adapter === 'camera') {
       console.log('Binding camera adapter for', deviceMode);
-    }
-    if (deviceMode === 'skorpio-x5' && adapter === 'wedge') {
-      console.log('Binding wedge adapter for Skorpio X5');
     }
     setTimeout(() => setIsBound(true), 50);
   }, [deviceMode, resolveAdapterForMode]);

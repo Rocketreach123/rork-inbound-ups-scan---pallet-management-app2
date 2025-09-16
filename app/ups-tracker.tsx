@@ -9,7 +9,6 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
-  TextInput,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Package, ExternalLink, History, Scan } from 'lucide-react-native';
@@ -20,14 +19,12 @@ interface TrackingHistory {
   trackingNumber: string;
   timestamp: Date;
 }
-import { useScan } from '@/providers/scan-provider';
 
 export default function UPSTracker() {
   const [isScanning, setIsScanning] = useState(false);
   const [currentTracking, setCurrentTracking] = useState<string>('');
   const [history, setHistory] = useState<TrackingHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { deviceMode } = useScan();
 
 
   const validateUPSTrackingNumber = (trackingNumber: string): boolean => {
@@ -192,33 +189,9 @@ export default function UPSTracker() {
             ),
           }}
         />
-        {deviceMode === 'mobile-camera' ? (
-          <EnhancedBarcodeScanner onScan={handleBarcodeScan} />
-        ) : (
-          <View style={styles.wedgeContainer}>
-            <Text style={styles.wedgeInfoText}>
-              Hardware scanner mode. Focus the field and scan a UPS tracking barcode.
-            </Text>
-            <TouchableOpacity
-              onPress={() => {}}
-              activeOpacity={1}
-              style={styles.wedgeTouch}
-            >
-              <TextInput
-                style={styles.wedgeInput}
-                autoFocus
-                blurOnSubmit={false}
-                onSubmitEditing={({ nativeEvent }: { nativeEvent: { text?: string } }) => {
-                  const val = (nativeEvent?.text ?? '').trim().toUpperCase();
-                  if (val) handleBarcodeScan(val);
-                }}
-                placeholder="Scan here"
-                placeholderTextColor="#9ca3af"
-                testID="ups-wedge-input"
-              />
-            </TouchableOpacity>
-          </View>
-        )}
+        <EnhancedBarcodeScanner
+          onScan={handleBarcodeScan}
+        />
       </View>
     );
   }
@@ -478,27 +451,5 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 6,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  wedgeContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-    padding: 16,
-    justifyContent: 'center',
-  },
-  wedgeInfoText: {
-    color: '#fff',
-    marginBottom: 8,
-  },
-  wedgeTouch: {
-    marginBottom: 12,
-  },
-  wedgeInput: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#374151',
-    color: '#e5e7eb',
-    borderRadius: 10,
-    height: 48,
-    paddingHorizontal: 12,
   },
 });

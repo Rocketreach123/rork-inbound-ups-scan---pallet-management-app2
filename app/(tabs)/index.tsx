@@ -2,15 +2,10 @@ import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Package, Search, TruckIcon, MapPin, BarChart3, Clock, AlertTriangle } from 'lucide-react-native';
+import { useWarehouse } from '@/providers/warehouse-provider';
 
 export default function DashboardScreen() {
-  // Mock stats for now
-  const stats = {
-    todayScans: 0,
-    activePallets: 0,
-    pendingPackages: 0
-  };
-  const recentScans: any[] = [];
+  const { stats, recentScans } = useWarehouse();
 
   const quickActions = [
     { 
@@ -73,7 +68,7 @@ export default function DashboardScreen() {
             <Package color="#10b981" size={24} />
           </View>
           <Text style={styles.statValue}>{stats.todayScans}</Text>
-          <Text style={styles.statLabel}>Today&apos;s Scans</Text>
+          <Text style={styles.statLabel}>Today's Scans</Text>
         </View>
         
         <View style={styles.statCard}>

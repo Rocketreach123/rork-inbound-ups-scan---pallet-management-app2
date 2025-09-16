@@ -32,8 +32,6 @@ import { EnhancedBarcodeScanner } from '@/components/EnhancedBarcodeScanner';
 import { parseLabel } from '@/lib/parsers/labelParser';
 import { BatchScanSession, ScanError, LabelExtractionResult, Pallet, ScanEvent } from '@/types/warehouse';
 
-import { useScan } from '@/providers/scan-provider';
-
 export default function BatchScanScreen() {
   const [session, setSession] = useState<BatchScanSession | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -57,7 +55,6 @@ export default function BatchScanScreen() {
     matchPalletCodeFromScan,
     scanEvents,
   } = useWarehouse();
-  const { deviceMode } = useScan();
   const sessionRef = useRef<BatchScanSession | null>(null);
   const [showPalletModal, setShowPalletModal] = useState(false);
   const [newPalletName, setNewPalletName] = useState('');
@@ -338,30 +335,12 @@ export default function BatchScanScreen() {
     <View style={styles.container}>
       {isScanning && (
         <View style={styles.scannerContainer}>
-          {deviceMode === 'mobile-camera' ? (
-            <EnhancedBarcodeScanner
-              onScan={handleBarcodeScan}
-              onLabelExtracted={handleLabelExtracted}
-              mode={scanMode}
-              continuous={true}
-            />
-          ) : (
-            <View style={{ flex: 1, backgroundColor: '#000', padding: 16 }}>
-              <Text style={{ color: '#fff', marginBottom: 8 }}>Hardware scanner mode. Focus the field below and scan barcodes.</Text>
-              <TextInput
-                style={{ backgroundColor: '#111827', borderWidth: 1, borderColor: '#374151', color: '#e5e7eb', borderRadius: 10, height: 48, paddingHorizontal: 12 }}
-                autoFocus
-                blurOnSubmit={false}
-                onSubmitEditing={({ nativeEvent }) => {
-                  const val = nativeEvent?.text?.trim().toUpperCase() ?? '';
-                  if (val) handleBarcodeScan(val);
-                }}
-                placeholder="Scan here"
-                placeholderTextColor="#9ca3af"
-                testID="batch-wedge-input"
-              />
-            </View>
-          )}
+          <EnhancedBarcodeScanner
+            onScan={handleBarcodeScan}
+            onLabelExtracted={handleLabelExtracted}
+            mode={scanMode}
+            continuous={true}
+          />
           
           <View style={styles.scanOverlay}>
             <View style={styles.sessionStats}>

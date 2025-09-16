@@ -1,10 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import createContextHook from '@nkzw/create-context-hook';
+import { mockData } from '@/mocks/warehouse-data';
 import { useApi } from '@/providers/api-provider';
-import { getLocations, getLicensePlates } from '@/api/acaClient';
-import { mapLocations } from '@/mappers/locationsMapper';
-import { mapPlates } from '@/mappers/platesMapper';
 import { 
   Package, 
   Pallet, 
@@ -52,11 +50,11 @@ interface WarehouseContextValue {
 }
 
 export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseContextValue>(() => {
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [pallets, setPallets] = useState<Pallet[]>([]);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [scanEvents, setScanEvents] = useState<ScanEvent[]>([]);
+  const [packages, setPackages] = useState<Package[]>(mockData.packages);
+  const [pallets, setPallets] = useState<Pallet[]>(mockData.pallets);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(mockData.purchaseOrders);
+  const [locations, setLocations] = useState<Location[]>(mockData.locations);
+  const [scanEvents, setScanEvents] = useState<ScanEvent[]>(mockData.scanEvents);
   const [settings, setSettings] = useState<Settings>({
     defaultPrinter: 'Zebra ZT410 - Dock 1',
     defaultZone: 'Z1',
@@ -66,48 +64,10 @@ export const [WarehouseProvider, useWarehouse] = createContextHook<WarehouseCont
   const [unmatchedPallet, setUnmatchedPallet] = useState<UnmatchedPallet | null>(null);
   const [activePalletId, setActivePalletId] = useState<string | null>(null);
 
-  // Load persisted data and fetch from ACA APIs
+  // Load persisted data
   useEffect(() => {
     loadPersistedData();
-    loadACAData();
   }, []);
-
-  const loadACAData = async () => {
-    try {
-      // Fetch locations from ACA API
-      const locationsRaw = await getLocations();
-      const mappedLocations = mapLocations(locationsRaw);
-      const acaLocations: Location[] = mappedLocations.map(loc => ({
-        id: loc.id,
-        code: loc.code || loc.name,
-        zone: loc.extra?.zone || 'Z1',
-        aisle: loc.extra?.aisle || 'A01',
-        bay: loc.extra?.bay || 'B01',
-        level: loc.extra?.level || 'L1',
-        currentPallet: undefined,
-        capacity: 1,
-        type: 'STANDARD' as const,
-      }));
-      setLocations(acaLocations);
-
-      // Fetch license plates from ACA API
-      const platesRaw = await getLicensePlates();
-      const mappedPlates = mapPlates(platesRaw);
-      const acaPallets: Pallet[] = mappedPlates.map(plate => ({
-        id: plate.id,
-        palletCode: plate.plate_number,
-        workDate: new Date().toISOString().split('T')[0],
-        dayBucket: 'AUTO',
-        department: 'WAREHOUSE',
-        state: (plate.status === 'OPEN' ? 'OPEN' : 'CLOSED') as 'OPEN' | 'CLOSED',
-        packageCount: 0,
-        currentLocation: plate.location_id || 'Z1/A01/B01/L1',
-      }));
-      setPallets(acaPallets);
-    } catch (error) {
-      console.error('Error loading ACA data:', error);
-    }
-  };
 
   const loadPersistedData = async () => {
     try {
