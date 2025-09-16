@@ -37,10 +37,12 @@ export default function ScanScreen() {
   }, []);
 
   const requestCameraPermission = async () => {
-    if (Platform.OS === 'web') {
+    // For Skorpio X5 and other hardware scanners, we don't need camera permission
+    if (deviceMode === 'skorpio-x5' || deviceMode === 'external-wedge') {
       setHasPermission(true);
       return;
     }
+    // For web and mobile camera mode
     setHasPermission(true);
   };
 
@@ -697,20 +699,44 @@ export default function ScanScreen() {
             </>
           ) : (
             <View style={styles.wedgeContainer}>
-              <Text style={styles.wedgeHeader}>{deviceMode === 'skorpio-x5' ? 'Hardware Scanner' : 'External Wedge'} Mode</Text>
-              <Text style={styles.wedgeSub}>Focus is held on the field. Scan a UPS (1Z...) or FedEx (12-22) barcode. Press Enter.</Text>
+              <Text style={styles.wedgeHeader}>{deviceMode === 'skorpio-x5' ? 'Skorpio X5 Hardware Scanner' : 'External Wedge'} Mode</Text>
+              <Text style={styles.wedgeSub}>The input field below is focused. Use your hardware scanner to scan a barcode.</Text>
               <TextInput
                 style={styles.wedgeInput}
                 autoFocus
                 blurOnSubmit={false}
+                onChangeText={(text) => {
+                  // Auto-submit when a complete barcode is detected
+                  const cleaned = text.trim().toUpperCase();
+                  // Check for common barcode patterns that indicate a complete scan
+                  if (
+                    /^1Z[A-Z0-9]{16}$/i.test(cleaned) || // UPS
+                    /^\d{12,22}$/.test(cleaned) || // FedEx
+                    cleaned.length >= 10 // Generic minimum length
+                  ) {
+                    console.log('Auto-detected complete barcode:', cleaned);
+                    handleBarcodeOnlyScan(cleaned);
+                  }
+                }}
                 onSubmitEditing={({ nativeEvent }) => {
                   const val = nativeEvent?.text?.trim().toUpperCase() ?? '';
-                  if (val) handleBarcodeOnlyScan(val);
+                  if (val) {
+                    console.log('Manual submit barcode:', val);
+                    handleBarcodeOnlyScan(val);
+                  }
                 }}
                 testID="wedge-input"
-                placeholder="Scan here"
+                placeholder="Ready to scan - Point scanner at barcode"
                 placeholderTextColor="#9ca3af"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                selectTextOnFocus={true}
+                clearButtonMode="while-editing"
               />
+              <View style={styles.wedgeStatus}>
+                <View style={[styles.statusDot, styles.statusDotActive]} />
+                <Text style={styles.wedgeStatusText}>Scanner Ready</Text>
+              </View>
             </View>
           )}
 
@@ -2068,5 +2094,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  wedgeStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#6b7280',
+  },
+  statusDotActive: {
+    backgroundColor: '#10b981',
+  },
+  wedgeStatusText: {
+    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
