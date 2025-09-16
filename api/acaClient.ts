@@ -54,18 +54,39 @@ async function fetchBatch(url: string): Promise<BatchResult> {
 
 export async function fetchAll(path: string, opts?: { manualRefresh?: boolean; limitQuery?: string }): Promise<ACAItem[]> {
   const base = env.ACA_API_BASE?.replace(/\/$/, '') ?? '';
-  const key = encodeURIComponent(env.ACA_API_KEY ?? '');
-  if (!base || !key) {
+  if (!base) {
     throw new Error('ACA API not configured');
   }
-  let next: string | null = `${base}${path.startsWith('/') ? path : `/${path}`}?service_key=${key}${opts?.limitQuery ? `&${opts.limitQuery}` : ''}${opts?.manualRefresh ? `&_ts=${Date.now()}` : ''}`;
+  
+  // When using proxy, we don't need service_key in the URL
+  const isProxy = base.includes('/api/aca') || base.includes('localhost');
+  let url: string;
+  
+  if (isProxy) {
+    // Using backend proxy - no service_key needed
+    url = `${base}${path.startsWith('/') ? path : `/${path}`}${opts?.limitQuery ? `?${opts.limitQuery}` : ''}${opts?.manualRefresh ? `${opts?.limitQuery ? '&' : '?'}_ts=${Date.now()}` : ''}`;
+  } else {
+    // Direct API call - needs service_key
+    const key = encodeURIComponent(env.ACA_API_KEY ?? '');
+    if (!key) {
+      throw new Error('ACA API key not configured');
+    }
+    url = `${base}${path.startsWith('/') ? path : `/${path}`}?service_key=${key}${opts?.limitQuery ? `&${opts.limitQuery}` : ''}${opts?.manualRefresh ? `&_ts=${Date.now()}` : ''}`;
+  }
+  
+  let next: string | null = url;
   const out: ACAItem[] = [];
   while (next) {
     const { items, next: n } = await fetchBatch(next);
     out.push(...items);
     await wait(0);
     if (typeof n === 'string' && n.length > 0) {
-      next = n.includes('service_key=') ? n : `${n}${n.includes('?') ? '&' : '?'}service_key=${key}`;
+      if (!isProxy) {
+        const key = encodeURIComponent(env.ACA_API_KEY ?? '');
+        next = n.includes('service_key=') ? n : `${n}${n.includes('?') ? '&' : '?'}service_key=${key}`;
+      } else {
+        next = n;
+      }
     } else {
       next = null;
     }
@@ -78,9 +99,23 @@ export async function fetchAllProgressive(
   opts: { manualRefresh?: boolean; limitQuery?: string; onBatch?: (batch: ACAItem[]) => void } = {}
 ): Promise<{ total: number }>{
   const base = env.ACA_API_BASE?.replace(/\/$/, '') ?? '';
-  const key = encodeURIComponent(env.ACA_API_KEY ?? '');
-  if (!base || !key) throw new Error('ACA API not configured');
-  let next: string | null = `${base}${path.startsWith('/') ? path : `/${path}`}?service_key=${key}${opts?.limitQuery ? `&${opts.limitQuery}` : ''}${opts?.manualRefresh ? `&_ts=${Date.now()}` : ''}`;
+  if (!base) throw new Error('ACA API not configured');
+  
+  // When using proxy, we don't need service_key in the URL
+  const isProxy = base.includes('/api/aca') || base.includes('localhost');
+  let url: string;
+  
+  if (isProxy) {
+    // Using backend proxy - no service_key needed
+    url = `${base}${path.startsWith('/') ? path : `/${path}`}${opts?.limitQuery ? `?${opts.limitQuery}` : ''}${opts?.manualRefresh ? `${opts?.limitQuery ? '&' : '?'}_ts=${Date.now()}` : ''}`;
+  } else {
+    // Direct API call - needs service_key
+    const key = encodeURIComponent(env.ACA_API_KEY ?? '');
+    if (!key) throw new Error('ACA API key not configured');
+    url = `${base}${path.startsWith('/') ? path : `/${path}`}?service_key=${key}${opts?.limitQuery ? `&${opts.limitQuery}` : ''}${opts?.manualRefresh ? `&_ts=${Date.now()}` : ''}`;
+  }
+  
+  let next: string | null = url;
   let total = 0;
   while (next) {
     const { items, next: n } = await fetchBatch(next);
@@ -88,7 +123,12 @@ export async function fetchAllProgressive(
     if (items.length) opts.onBatch?.(items);
     await wait(0);
     if (typeof n === 'string' && n.length > 0) {
-      next = n.includes('service_key=') ? n : `${n}${n.includes('?') ? '&' : '?'}service_key=${key}`;
+      if (!isProxy) {
+        const key = encodeURIComponent(env.ACA_API_KEY ?? '');
+        next = n.includes('service_key=') ? n : `${n}${n.includes('?') ? '&' : '?'}service_key=${key}`;
+      } else {
+        next = n;
+      }
     } else {
       next = null;
     }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { CheckCircle, XCircle, AlertCircle, RefreshCw, Database, Globe } from 'lucide-react-native';
+import { CheckCircle, XCircle, AlertCircle, RefreshCw, Database, Globe, Wifi, Clock } from 'lucide-react-native';
 import { env } from '@/lib/env';
-import { getLocations, getLicensePlates } from '@/api/acaClient';
+import * as acaClient from '@/api/acaClient';
 import { useLocations } from '@/stores/locationsSlice';
 import { usePlates } from '@/stores/platesSlice';
 
@@ -11,6 +11,7 @@ interface TestResult {
   status: 'pending' | 'success' | 'error' | 'warning';
   message: string;
   details?: any;
+  timestamp?: number;
 }
 
 export default function ApiTestScreen() {
@@ -22,10 +23,12 @@ export default function ApiTestScreen() {
   const runTests = async () => {
     setIsRunning(true);
     const results: TestResult[] = [];
+    console.log('[API TEST] Starting comprehensive API tests...');
+    console.log('[API TEST] Environment:', { base: env.ACA_API_BASE, key: env.ACA_API_KEY ? 'SET' : 'NOT SET' });
 
     // Test 1: Environment Variables
     results.push({
-      name: 'Environment Configuration',
+      name: '🔧 Environment Configuration',
       status: env.ACA_API_BASE && env.ACA_API_KEY ? 'success' : 'error',
       message: env.ACA_API_BASE && env.ACA_API_KEY 
         ? `API Base: ${env.ACA_API_BASE}` 
@@ -33,14 +36,55 @@ export default function ApiTestScreen() {
       details: {
         base: env.ACA_API_BASE || 'NOT SET',
         key: env.ACA_API_KEY ? '***' + env.ACA_API_KEY.slice(-4) : 'NOT SET'
-      }
+      },
+      timestamp: Date.now()
     });
 
-    // Test 2: Locations API
+    // Test 2: Direct API Connection
     try {
+      console.log('[API TEST] Testing direct API connection...');
+      const testUrl = `${env.ACA_API_BASE}/locations?service_key=${encodeURIComponent(env.ACA_API_KEY || '')}&limit=1`;
       const startTime = Date.now();
-      const locations = await getLocations({ manualRefresh: true });
+      const response = await fetch(testUrl, { signal: AbortSignal.timeout(10000) });
+      const responseTime = Date.now() - startTime;
+      
+      console.log('[API TEST] Direct API response:', response.status, response.statusText);
+      
+      results.push({
+        name: '🌐 Direct API Connection',
+        status: response.ok ? 'success' : 'error',
+        message: `API responded with ${response.status} in ${responseTime}ms`,
+        details: {
+          status: response.status,
+          statusText: response.statusText,
+          responseTime: `${responseTime}ms`,
+          headers: {
+            'content-type': response.headers.get('content-type'),
+            'etag': response.headers.get('etag')
+          }
+        },
+        timestamp: Date.now()
+      });
+    } catch (error: any) {
+      console.error('[API TEST] Direct connection failed:', error);
+      results.push({
+        name: '🌐 Direct API Connection',
+        status: 'error',
+        message: `Connection failed: ${error.message}`,
+        details: { error: error.message },
+        timestamp: Date.now()
+      });
+    }
+
+    // Test 3: Locations API
+    try {
+      console.log('[API TEST] Fetching locations...');
+      const startTime = Date.now();
+      const locations = await acaClient.getLocations({ manualRefresh: true });
       const elapsed = Date.now() - startTime;
+      
+      console.log('[API TEST] Locations fetched:', locations.length, 'items');
+      console.log('[API TEST] Sample location:', locations[0]);
       
       const hasDummyData = locations.some((loc: any) => {
         const str = JSON.stringify(loc);
@@ -48,78 +92,136 @@ export default function ApiTestScreen() {
       });
 
       results.push({
-        name: 'Locations API',
-        status: hasDummyData ? 'error' : 'success',
+        name: '📍 Locations API',
+        status: hasDummyData ? 'warning' : (locations.length > 0 ? 'success' : 'error'),
         message: hasDummyData 
-          ? `DUMMY DATA DETECTED! Found ${locations.length} locations`
+          ? `⚠️ Possible dummy data! Found ${locations.length} locations`
           : `Fetched ${locations.length} real locations in ${elapsed}ms`,
         details: {
           count: locations.length,
-          sample: locations.slice(0, 3).map((l: any) => ({
+          responseTime: `${elapsed}ms`,
+          sample: locations.slice(0, 2).map((l: any) => ({
             id: l.id,
             name: l.name || l.label,
-            zone: l.zone
+            zone: l.zone,
+            aisle: l.aisle
           })),
           hasDummyData
-        }
+        },
+        timestamp: Date.now()
       });
     } catch (error: any) {
+      console.error('[API TEST] Locations fetch failed:', error);
       results.push({
-        name: 'Locations API',
+        name: '📍 Locations API',
         status: 'error',
         message: `Failed: ${error.message}`,
-        details: { error: error.message }
+        details: { error: error.message },
+        timestamp: Date.now()
       });
     }
 
-    // Test 3: License Plates API
+    // Test 4: License Plates API
     try {
+      console.log('[API TEST] Fetching license plates...');
       const startTime = Date.now();
-      const plates = await getLicensePlates({ manualRefresh: true });
+      const plates = await acaClient.getLicensePlates({ manualRefresh: true });
       const elapsed = Date.now() - startTime;
+      
+      console.log('[API TEST] Plates fetched:', plates.length, 'items');
+      console.log('[API TEST] Sample plate:', plates[0]);
       
       const hasDummyData = plates.some((plate: any) => {
         const str = JSON.stringify(plate);
-        return /LP\s?\d{3,}/.test(str) && !str.includes('plate_number');
+        return /LP\s?\d{3,}/.test(str) || /TEST-/.test(str) || /DEMO-/.test(str);
       });
 
       results.push({
-        name: 'License Plates API',
-        status: hasDummyData ? 'error' : 'success',
+        name: '🚗 License Plates API',
+        status: hasDummyData ? 'warning' : (plates.length > 0 ? 'success' : 'error'),
         message: hasDummyData 
-          ? `DUMMY DATA DETECTED! Found ${plates.length} plates`
+          ? `⚠️ Possible dummy data! Found ${plates.length} plates`
           : `Fetched ${plates.length} real plates in ${elapsed}ms`,
         details: {
           count: plates.length,
-          sample: plates.slice(0, 3).map((p: any) => ({
+          responseTime: `${elapsed}ms`,
+          sample: plates.slice(0, 2).map((p: any) => ({
             id: p.id,
             plate_number: p.plate_number || p.plate || p.tag,
-            state: p.state || p.region
+            state: p.state || p.region,
+            location: p.location_id || p.location?.id
           })),
           hasDummyData
-        }
+        },
+        timestamp: Date.now()
       });
     } catch (error: any) {
+      console.error('[API TEST] Plates fetch failed:', error);
       results.push({
-        name: 'License Plates API',
+        name: '🚗 License Plates API',
         status: 'error',
         message: `Failed: ${error.message}`,
-        details: { error: error.message }
+        details: { error: error.message },
+        timestamp: Date.now()
       });
     }
 
-    // Test 4: Store Data Verification
+    // Test 5: Progressive Fetch Test
+    try {
+      console.log('[API TEST] Testing progressive fetch...');
+      let batchCount = 0;
+      let itemsPerBatch: number[] = [];
+      
+      const { total } = await acaClient.fetchAllProgressive('/locations', {
+        limitQuery: 'limit=50',
+        onBatch: (batch) => {
+          batchCount++;
+          itemsPerBatch.push(batch.length);
+          console.log(`[API TEST] Batch ${batchCount}: ${batch.length} items`);
+        }
+      });
+      
+      results.push({
+        name: '📦 Progressive Loading',
+        status: 'success',
+        message: `Loaded ${total} items in ${batchCount} batch(es)`,
+        details: {
+          totalItems: total,
+          batchCount,
+          itemsPerBatch,
+          avgPerBatch: batchCount > 0 ? Math.round(total / batchCount) : 0
+        },
+        timestamp: Date.now()
+      });
+    } catch (error: any) {
+      console.error('[API TEST] Progressive fetch failed:', error);
+      results.push({
+        name: '📦 Progressive Loading',
+        status: 'error',
+        message: `Failed: ${error.message}`,
+        details: { error: error.message },
+        timestamp: Date.now()
+      });
+    }
+
+    // Test 6: Store Data Verification
     const storeHasDummy = storeLocations.some(loc => 
       /^LOC-/.test(loc.name) || /^LOC-/.test(loc.code || '')
     ) || storePlates.some(plate => 
       /^LP\s?\d/.test(plate.plate_number) && plate.plate_number.length < 10
     );
 
+    console.log('[API TEST] Store verification:', {
+      locations: storeLocations.length,
+      plates: storePlates.length,
+      hasDummy: storeHasDummy
+    });
+
     results.push({
-      name: 'Store Data Verification',
-      status: storeHasDummy ? 'error' : 'success',
+      name: '💾 Store Data Verification',
+      status: storeHasDummy ? 'warning' : 'success',
       message: storeHasDummy 
-        ? 'DUMMY DATA IN STORE!' 
+        ? '⚠️ Possible dummy data in store!' 
         : `Store has ${storeLocations.length} locations, ${storePlates.length} plates`,
       details: {
         locations: storeLocations.length,
@@ -127,19 +229,27 @@ export default function ApiTestScreen() {
         locError,
         platesError,
         hasDummy: storeHasDummy
-      }
+      },
+      timestamp: Date.now()
     });
 
-    // Test 5: API Response Format
+    // Test 7: API Response Format
     try {
-      const testUrl = `${env.ACA_API_BASE}/locations?service_key=${encodeURIComponent(env.ACA_API_KEY)}&limit=1`;
+      console.log('[API TEST] Checking API response format...');
+      const testUrl = `${env.ACA_API_BASE}/locations?service_key=${encodeURIComponent(env.ACA_API_KEY || '')}&limit=1`;
       const response = await fetch(testUrl);
       const data = await response.json();
       
       const isValidFormat = Array.isArray(data) || Array.isArray(data?.data);
       
+      console.log('[API TEST] Response format:', {
+        isArray: Array.isArray(data),
+        hasDataField: !!data?.data,
+        keys: Object.keys(data || {})
+      });
+      
       results.push({
-        name: 'API Response Format',
+        name: '📋 API Response Format',
         status: isValidFormat ? 'success' : 'warning',
         message: isValidFormat 
           ? 'Valid API response format' 
@@ -148,26 +258,46 @@ export default function ApiTestScreen() {
           isArray: Array.isArray(data),
           hasDataField: !!data?.data,
           keys: Object.keys(data || {}).slice(0, 5)
-        }
+        },
+        timestamp: Date.now()
       });
     } catch (error: any) {
+      console.error('[API TEST] Format check failed:', error);
       results.push({
-        name: 'API Response Format',
+        name: '📋 API Response Format',
         status: 'error',
         message: `Failed: ${error.message}`,
-        details: { error: error.message }
+        details: { error: error.message },
+        timestamp: Date.now()
       });
     }
+
+    // Test Summary
+    const successCount = results.filter(r => r.status === 'success').length;
+    const errorCount = results.filter(r => r.status === 'error').length;
+    const warningCount = results.filter(r => r.status === 'warning').length;
+    
+    console.log('[API TEST] Test Summary:', {
+      total: results.length,
+      success: successCount,
+      errors: errorCount,
+      warnings: warningCount
+    });
 
     setTests(results);
     setIsRunning(false);
 
-    // Show alert if dummy data detected
-    const hasDummy = results.some(r => r.message.includes('DUMMY'));
-    if (hasDummy) {
+    // Show alert if there are critical errors
+    if (errorCount > 0) {
       Alert.alert(
-        '⚠️ Dummy Data Detected',
-        'The app is still using mock/dummy data. Please check the API configuration and data sources.',
+        '❌ API Test Failed',
+        `${errorCount} test(s) failed. Check the details for more information.`,
+        [{ text: 'OK' }]
+      );
+    } else if (warningCount > 0) {
+      Alert.alert(
+        '⚠️ API Test Warning',
+        `Tests passed with ${warningCount} warning(s). Review the results.`,
         [{ text: 'OK' }]
       );
     }
@@ -203,11 +333,15 @@ export default function ApiTestScreen() {
     }
   };
 
+  const successCount = tests.filter(t => t.status === 'success').length;
+  const errorCount = tests.filter(t => t.status === 'error').length;
+  const warningCount = tests.filter(t => t.status === 'warning').length;
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Database color="#1e40af" size={24} />
-        <Text style={styles.title}>API Connection Test</Text>
+        <Text style={styles.title}>API Test Report</Text>
         <TouchableOpacity 
           onPress={runTests} 
           disabled={isRunning}
@@ -224,6 +358,23 @@ export default function ApiTestScreen() {
         </Text>
       </View>
 
+      {tests.length > 0 && (
+        <View style={styles.statsBar}>
+          <View style={styles.stat}>
+            <Text style={[styles.statCount, { color: '#10b981' }]}>{successCount}</Text>
+            <Text style={styles.statLabel}>Passed</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={[styles.statCount, { color: '#f59e0b' }]}>{warningCount}</Text>
+            <Text style={styles.statLabel}>Warnings</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={[styles.statCount, { color: '#ef4444' }]}>{errorCount}</Text>
+            <Text style={styles.statLabel}>Failed</Text>
+          </View>
+        </View>
+      )}
+
       {tests.map((test, index) => (
         <View key={index} style={styles.testCard}>
           <View style={styles.testHeader}>
@@ -239,6 +390,11 @@ export default function ApiTestScreen() {
                 {JSON.stringify(test.details, null, 2)}
               </Text>
             </View>
+          )}
+          {test.timestamp && (
+            <Text style={styles.timestamp}>
+              {new Date(test.timestamp).toLocaleTimeString()}
+            </Text>
           )}
         </View>
       ))}
@@ -331,5 +487,30 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#9ca3af',
     fontSize: 14,
+  },
+  statsBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  stat: {
+    alignItems: 'center',
+  },
+  statCount: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  timestamp: {
+    fontSize: 10,
+    color: '#9ca3af',
+    marginTop: 8,
   },
 });

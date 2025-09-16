@@ -1,24 +1,26 @@
-import Constants from 'expo-constants';
-
 export type Env = {
   ACA_API_BASE: string;
   ACA_API_KEY: string;
 };
 
-const sanitize = (key: string): string => key.replace(/.(?=.{4})/g, '*');
+const getBackendUrl = () => {
+  // Use the same backend URL as tRPC
+  if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
+    return process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+  }
+  // Fallback for local development
+  return 'http://localhost:3000';
+};
 
 export function loadEnv(): Env {
-  const extras: Record<string, any> = (Constants?.expoConfig as any)?.extra ?? {};
-  const ACA_API_BASE = (process.env.ACA_API_BASE ?? extras.ACA_API_BASE ?? '').toString();
-  const ACA_API_KEY = (process.env.ACA_API_KEY ?? extras.ACA_API_KEY ?? '').toString();
-  if (!ACA_API_BASE) {
-    console.warn('[env] ACA_API_BASE is not set');
-  }
-  if (!ACA_API_KEY) {
-    console.warn('[env] ACA_API_KEY is not set');
-  } else {
-    console.log('[env] Loaded ACA_API_KEY:', sanitize(ACA_API_KEY));
-  }
+  const backendUrl = getBackendUrl();
+  
+  // Use backend proxy for ACA API
+  const ACA_API_BASE = `${backendUrl}/api/aca`;
+  const ACA_API_KEY = 'proxy'; // Not needed when using proxy
+  
+  console.log('[env] Using backend proxy for ACA API:', ACA_API_BASE);
+  
   return { ACA_API_BASE, ACA_API_KEY };
 }
 
