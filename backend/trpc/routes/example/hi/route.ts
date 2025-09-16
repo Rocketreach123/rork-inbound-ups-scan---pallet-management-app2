@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure } from "@/backend/trpc/create-context";
 
-export default publicProcedure
+export const hiProcedure = publicProcedure
   .input(z.object({ name: z.string() }))
   .mutation(({ input }: { input: { name: string } }) => {
     return {
@@ -9,3 +9,5 @@ export default publicProcedure
       date: new Date(),
     };
   });
+
+export default hiProcedure;

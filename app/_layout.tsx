@@ -4,14 +4,15 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { WarehouseProvider } from "@/providers/warehouse-provider";
+// Temporarily comment out providers to isolate the issue
+// import { WarehouseProvider } from "@/providers/warehouse-provider";
 import { ApiProvider } from "@/providers/api-provider";
 import { ScanProvider } from "@/providers/scan-provider";
 import { StorageProvider } from "@/providers/storage-provider";
 import { LocationsProvider } from "@/stores/locationsSlice";
 import { PlatesProvider } from "@/stores/platesSlice";
-import DeviceModeGate from "@/components/DeviceModeGate";
-import { GlobalBarcodeListener } from "@/components/GlobalBarcodeListener";
+// import DeviceModeGate from "@/components/DeviceModeGate";
+// import { GlobalBarcodeListener } from "@/components/GlobalBarcodeListener";
 import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
@@ -200,11 +201,7 @@ export default function RootLayout() {
               <PlatesProvider>
                 <ApiProvider>
                   <ScanProvider>
-                    <WarehouseProvider>
-                      <DeviceModeGate />
-                      <GlobalBarcodeListener />
-                      <RootLayoutNav />
-                    </WarehouseProvider>
+                    <RootLayoutNav />
                   </ScanProvider>
                 </ApiProvider>
               </PlatesProvider>
